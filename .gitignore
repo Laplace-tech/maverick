@@ -1,9 +1,18 @@
 .venv/
 __pycache__/
+*.py[cod]
 .ipynb_checkpoints/
-*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Datasets, model weights, and generated outputs
 data/
-datasets/
 outputs/
-runs/
-.env
+*.pt
+*.pth
+*.ckpt
+
+# Editors and OS files
+.idea/
+.vscode/
+.DS_Store
