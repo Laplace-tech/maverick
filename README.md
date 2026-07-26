@@ -8,8 +8,8 @@
 
 <br />
 
-<img src="https://img.shields.io/badge/Current%20Course-Chapter%203.4-126E82?style=for-the-badge" alt="Current course Chapter 3.4" />
-<img src="https://img.shields.io/badge/Target-Transformer-B565A7?style=for-the-badge" alt="Target Transformer" />
+<img src="https://img.shields.io/badge/Current%20Course-Chapter%204.3-126E82?style=for-the-badge" alt="Current course Chapter 4.3" />
+<img src="https://img.shields.io/badge/Target-Full%20D2L-B565A7?style=for-the-badge" alt="Target Full D2L" />
 <img src="https://img.shields.io/badge/Framework-PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch" />
 
 </div>
@@ -23,12 +23,12 @@
 | 항목 | 내용 |
 |---|---|
 | Textbook | [Dive into Deep Learning](https://d2l.ai/), PyTorch edition |
-| Study Range | Chapter 1–11 |
-| Current Position | Chapter 3.4 · Linear Regression Implementation from Scratch |
-| Goal | Attention과 Transformer를 직접 구현하고 설명할 수 있는 수준 |
+| Study Range | 전체 본문 Chapter 1–21 및 Appendices |
+| Current Position | Chapter 4.3 · The Base Classification Model |
+| Goal | D2L 전체 완주 및 주요 모델을 직접 구현하고 설명할 수 있는 수준 |
 | Study Period | 2026.07.23 – 2026.09.07 |
 | Environment | Windows 11 · WSL2 Ubuntu · VS Code |
-| Repository Style | 소절별 Jupyter Notebook + 누적 복습 테스트 |
+| Repository Style | 학습 흐름별 Jupyter Notebook + 누적 복습 테스트 |
 
 <br />
 
@@ -51,17 +51,28 @@
 
 | Chapter | Course | Status |
 |:---:|---|:---:|
-| 1 | Introduction | Orientation |
-| 2 | Preliminaries | 2.1–2.5 학습 · 2.6 보류 |
-| 3 | Linear Neural Networks for Regression | **3.4 진행 중** |
-| 4 | Linear Neural Networks for Classification | Planned |
+| 1 | Introduction | 정독 보완 예정 |
+| 2 | Preliminaries | 2.1–2.6 학습 · 2.7 보류 |
+| 3 | Linear Neural Networks for Regression | **Completed** |
+| 4 | Linear Neural Networks for Classification | **4.1–4.2 완료 · 4.3 다음** |
 | 5 | Multilayer Perceptrons | Planned |
 | 6 | Builders' Guide | Planned |
 | 7 | Convolutional Neural Networks | Planned |
 | 8 | Modern Convolutional Neural Networks | Planned |
 | 9 | Recurrent Neural Networks | Planned |
 | 10 | Modern Recurrent Neural Networks | Planned |
-| 11 | Attention Mechanisms and Transformers | Target |
+| 11 | Attention Mechanisms and Transformers | Milestone |
+| 12 | Optimization Algorithms | Planned |
+| 13 | Computational Performance | Planned |
+| 14 | Computer Vision | Planned |
+| 15 | Natural Language Processing: Pretraining | Planned |
+| 16 | Natural Language Processing: Applications | Planned |
+| 17 | Reinforcement Learning | Planned |
+| 18 | Gaussian Processes | Planned |
+| 19 | Hyperparameter Optimization | Planned |
+| 20 | Generative Adversarial Networks | Planned |
+| 21 | Recommender Systems | Planned |
+| A–B | Mathematics and Tools for Deep Learning | Planned |
 
 <br />
 
@@ -74,7 +85,8 @@
 - Linear algebra: vector, matrix multiplication, reduction, norm
 - Calculus: derivative, partial derivative, gradient, chain rule
 - Automatic differentiation: computation graph, nonscalar backward, detach
-- Probability and statistics: coin tossing와 probability axioms까지 진행
+- Probability and statistics: random variable, joint·conditional probability, Bayes, expectation, variance, covariance
+- Documentation: 추후 보완
 
 ### Chapter 3 · Linear Neural Networks for Regression
 
@@ -83,7 +95,17 @@
 - 선형회귀를 단일층 fully connected network로 해석
 - `Module`, `DataModule`, `Trainer`의 역할 분리
 - Synthetic regression data와 PyTorch `DataLoader`
-- Linear regression from scratch 진행 중
+- Linear regression의 직접 구현과 PyTorch 간결 구현
+- Training error, generalization error, underfitting, overfitting, model selection
+- L2 regularization과 weight decay
+
+### Chapter 4 · Linear Neural Networks for Classification
+
+- Multi-class classification과 one-hot encoding
+- Logit, stable softmax, cross-entropy loss
+- Softmax와 cross-entropy의 gradient 검증
+- Entropy, surprisal, cross-entropy의 정보이론적 해석
+- Fashion-MNIST 다운로드, minibatch 구성, 데이터 시각화
 
 <br />
 
@@ -99,11 +121,17 @@ maverick/
 │   │   ├── sec2_4_calculus/
 │   │   ├── sec2_5_automatic_differentiation/
 │   │   └── sec2_6_probability_and_statistics/
-│   └── ch03_linear_neural_networks_for_regression/
-│       ├── sec3_1_linear_regression/
-│       ├── sec3_2_object_oriented_design_for_implementation/
-│       ├── sec3_3_synthetic_regression_data/
-│       └── sec3_4_linear_regression_implementation_from_scratch/
+│   ├── ch03_linear_neural_networks_for_regression/
+│   │   ├── sec3_1_linear_regression/
+│   │   ├── sec3_2_object_oriented_design_for_implementation/
+│   │   ├── sec3_3_synthetic_regression_data/
+│   │   ├── sec3_4_linear_regression_implementation_from_scratch/
+│   │   ├── sec3_5_concise_implementation_of_linear_regression/
+│   │   ├── sec3_6_generalization/
+│   │   └── sec3_7_weight_decay/
+│   └── ch04_linear_neural_networks_for_classification/
+│       ├── sec4_1_softmax_regression/
+│       └── sec4_2_image_classification_dataset/
 ├── .gitignore
 └── README.md
 ```
