@@ -9,7 +9,8 @@
 <br />
 
 <img src="https://img.shields.io/badge/Next%20Course-Chapter%206-126E82?style=for-the-badge" alt="Next course Chapter 6" />
-<img src="https://img.shields.io/badge/Target-Full%20D2L-B565A7?style=for-the-badge" alt="Target Full D2L" />
+<img src="https://img.shields.io/badge/Required-Chapter%2016-6B5B95?style=for-the-badge" alt="Required Chapter 16" />
+<img src="https://img.shields.io/badge/Target-Chapter%2019-B565A7?style=for-the-badge" alt="Target Chapter 19" />
 <img src="https://img.shields.io/badge/Framework-PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch" />
 
 </div>
@@ -23,9 +24,9 @@
 | 항목 | 내용 |
 |---|---|
 | Textbook | [Dive into Deep Learning](https://d2l.ai/), PyTorch edition |
-| Study Range | 전체 본문 Chapter 1–21 및 Appendices |
+| Study Range | Chapter 1–20 · Chapter 21 제외 |
 | Current Position | Chapter 5 완료 · Chapter 6 다음 |
-| Goal | D2L 전체 완주 및 주요 모델을 직접 구현하고 설명할 수 있는 수준 |
+| Goal | Chapter 16 필수 · Chapter 19 목표 · 여유 시 Chapter 20 GAN |
 | Study Period | 2026.07.23 – 2026.09.07 |
 | Environment | Windows 11 · WSL2 Ubuntu · VS Code |
 | Repository Style | 학습 흐름별 Jupyter Notebook + 누적 복습 테스트 |
@@ -66,13 +67,13 @@
 | 13 | Computational Performance | Planned |
 | 14 | Computer Vision | Planned |
 | 15 | Natural Language Processing: Pretraining | Planned |
-| 16 | Natural Language Processing: Applications | Planned |
+| 16 | Natural Language Processing: Applications | **Required Milestone** |
 | 17 | Reinforcement Learning | Planned |
 | 18 | Gaussian Processes | Planned |
-| 19 | Hyperparameter Optimization | Planned |
-| 20 | Generative Adversarial Networks | Planned |
-| 21 | Recommender Systems | Planned |
-| A–B | Mathematics and Tools for Deep Learning | Planned |
+| 19 | Hyperparameter Optimization | **Target** |
+| 20 | Generative Adversarial Networks | Optional |
+| 21 | Recommender Systems | Excluded |
+| A–B | Mathematics and Tools for Deep Learning | Backlog |
 
 <br />
 
