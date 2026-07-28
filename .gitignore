@@ -11,6 +11,7 @@ outputs/
 *.pt
 *.pth
 *.ckpt
+submission.csv
 
 # Editors and OS files
 .idea/

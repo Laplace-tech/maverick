@@ -1,0 +1,1553 @@
+Multilayer Perceptrons
+In this chapter, we will introduce your first truly deep network. The simplest deep networks
+are called multilayer perceptrons, and they consist of multiple layers of neurons each fully
+connected to those in the layer below (from which they receive input) and those above
+(which they, in turn, influence). Although automatic differentiation significantly simplifies
+the implementation of deep learning algorithms, we will dive deep into how these gradi
+ents are calculated in deep networks. Then we will be ready to discuss issues relating to
+numerical stability and parameter initialization that are key to successfully training deep
+networks. When we train such high-capacity models we run the risk of overfitting. Thus,
+we will revisit regularization and generalization for deep networks. Throughout, we aim to
+give you a firmgrasp not just of the concepts but also of the practice of using deep networks.
+At the end of this chapter, we apply what we have introduced so far to a real case: house
+price prediction. We punt matters relating to the computational performance, scalability,
+and efficiency of our models to subsequent chapters.
+5.1 Multilayer Perceptrons
+In Section 4.1, we introduced softmax regression, implementing the algorithm from scratch
+(Section 4.4) and usinghigh-level APIs (Section 4.5). This allowedustotrainclassifiers ca
+pable of recognizing 10 categories of clothing from low-resolution images. Along the way,
+we learned how to wrangle data, coerce our outputs into a valid probability distribution,
+apply an appropriate loss function, and minimize it with respect to our model’s parameters.
+Now that we have mastered these mechanics in the context of simple linear models, we
+can launch our exploration of deep neural networks, the comparatively rich class of models
+with which this book is primarily concerned.
+%matplotlib inline
+import torch
+from d2l import torch as d2l
+5.1.1 Hidden Layers
+We described affine transformations in Section 3.1.1 as linear transformations with added
+bias. To begin, recall the model architecture corresponding to our softmax regression ex
+167
+168
+Multilayer Perceptrons
+ample, illustrated in Fig. 4.1.1. This model maps inputs directly to outputs via a single
+affine transformation, followed by a softmax operation. If our labels truly were related to
+the input data by a simple affine transformation, then this approach would be sufficient.
+However, linearity (in affine transformations) is a strong assumption.
+Limitations of Linear Models
+For example, linearity implies the weaker assumption of monotonicity, i.e., that any in
+crease in our feature must either always cause an increase in our model’s output (if the
+corresponding weight is positive), or always cause a decrease in our model’s output (if
+the corresponding weight is negative). Sometimes that makes sense. For example, if we
+were trying to predict whether an individual will repay a loan, we might reasonably assume
+that all other things being equal, an applicant with a higher income would always be more
+likely to repay than one with a lower income. While monotonic, this relationship likely
+is not linearly associated with the probability of repayment. An increase in income from
+$0 to $50,000 likely corresponds to a bigger increase in likelihood of repayment than an
+increase from $1 million to $1.05 million. One way to handle this might be to postprocess
+our outcome such that linearity becomes more plausible, by using the logistic map (and
+thus the logarithm of the probability of outcome).
+Note that we can easily come up with examples that violate monotonicity. Say for example
+that we want to predict health as a function of body temperature. For individuals with a
+normal body temperature above 37°C (98.6°F), higher temperatures indicate greater risk.
+However, if the body temperatures drops below 37°C, lower temperatures indicate greater
+risk! Again, we might resolve the problem with some clever preprocessing, such as using
+the distance from 37°C as a feature.
+But what about classifying images of cats and dogs? Should increasing the intensity of the
+pixel at location (13, 17) always increase (or always decrease) the likelihood that the image
+depicts a dog? Reliance on a linear model corresponds to the implicit assumption that the
+only requirement for differentiating cats and dogs is to assess the brightness of individual
+pixels. This approach is doomed to fail in a world where inverting an image preserves the
+category.
+And yet despite the apparent absurdity of linearity here, as compared with our previous
+examples, it is less obvious that we could address the problem with a simple preprocessing
+fix. That is, because the significance of any pixel depends in complex ways on its context
+(the values of the surrounding pixels). While there might exist a representation of our data
+that would take into account the relevant interactions among our features, on top of which
+a linear model would be suitable, we simply do not know how to calculate it by hand. With
+deep neural networks, we used observational data to jointly learn both a representation via
+hidden layers and a linear predictor that acts upon that representation.
+This problem of nonlinearity has been studied for at least a century (Fisher, 1925). For
+instance, decision trees in their most basic form use a sequence of binary decisions to de
+cide upon class membership (Quinlan, 1993). Likewise, kernel methods have been used
+for many decades to model nonlinear dependencies (Aronszajn, 1950). This has found its
+169
+Multilayer Perceptrons
+Fig. 5.1.1
+way into nonparametric spline models (Wahba, 1990) and kernel methods (Schölkopf and
+Smola, 2002). It is also something that the brain solves quite naturally. After all, neu
+rons feed into other neurons which, in turn, feed into other neurons again (Ramón y Cajal
+and Azoulay, 1894). Consequently we have a sequence of relatively simple transforma
+tions.
+Incorporating Hidden Layers
+We can overcome the limitations of linear models by incorporating one or more hidden
+layers. The easiest way to do this is to stack many fully connected layers on top of one
+another. Each layer feeds into the layer above it, until we generate outputs. We can think of
+the first 𝐿 − 1 layers as our representation and the final layer as our linear predictor. This
+architecture is commonly called a multilayer perceptron, often abbreviated as MLP (Fig.
+5.1.1).
+An MLP with a hidden layer of five hidden units.
+This MLP has four inputs, three outputs, and its hidden layer contains five hidden units.
+Since the input layer does not involve any calculations, producing outputs with this network
+requires implementing the computations for both the hidden and output layers; thus, the
+number of layers in this MLP is two. Note that both layers are fully connected. Every
+input influences every neuron in the hidden layer, and each of these in turn influences every
+neuron in the output layer. Alas, we are not quite done yet.
+From Linear to Nonlinear
+As before, we denote by the matrix X ∈ R𝑛×𝑑 aminibatchof𝑛 exampleswhereeachexam
+ple has 𝑑 inputs (features). For a one-hidden-layer MLP whose hidden layer has ℎ hidden
+units, we denote by H ∈ R𝑛×ℎ the outputs of the hidden layer, which are hidden represen
+tations. Since the hidden and output layers are both fully connected, we have hidden-layer
+weights W(1) ∈ R𝑑×ℎ and biases b(1) ∈ R1×ℎ and output-layer weights W(2) ∈ Rℎ×𝑞 and
+biases b(2) ∈ R1×𝑞. This allows us to calculate the outputs O ∈ R𝑛×𝑞 of the one-hidden
+layer MLP as follows:
+H=XW(1) +b(1),
+O=HW(2) +b(2).
+(5.1.1)
+Note that after adding the hidden layer, our model now requires us to track and update
+additional sets of parameters. So what havewegainedinexchange? Youmightbesurprised
+170
+Multilayer Perceptrons
+to find out that—in the model defined above—wegain nothing for our troubles! Thereason
+is plain. The hiddenunitsabovearegivenbyanaffinefunctionoftheinputs, andtheoutputs
+(pre-softmax) are just an affine function of the hidden units. An affine function of an affine
+function is itself an affine function. Moreover, our linear model was already capable of
+representing any affine function.
+Tosee this formallywecan just collapseout thehidden layer in theabovedefinition, yielding
+an equivalent single-layer model with parameters W = W(1)W(2) and b = b(1)W(2) +
+b(2):
+O=(XW(1) +b(1))W(2) +b(2) = XW(1)W(2) +b(1)W(2) +b(2) = XW+b.
+(5.1.2)
+In order to realize the potential of multilayer architectures, we need one more key ingre
+dient: a nonlinear activation function 𝜎 to be applied to each hidden unit following the
+affine transformation. For instance, a popular choice is the ReLU (rectified linear unit) ac
+tivation function (Nair and Hinton, 2010) 𝜎(𝑥) = max(0,𝑥) operating on its arguments
+elementwise. The outputs of activation functions 𝜎(·) are called activations. In general,
+with activation functions in place, it is no longer possible to collapse our MLP into a linear
+model:
+H=𝜎(XW(1) +b(1)),
+O=HW(2) +b(2).
+(5.1.3)
+Since each row in X corresponds to an example in the minibatch, with some abuse of
+notation, we define the nonlinearity 𝜎 to apply to its inputs in a rowwise fashion, i.e., one
+example at a time. Note that we used the same notation for softmax when we denoted a
+rowwise operation in Section 4.1.1. Quite frequently the activation functions we use apply
+not merely rowwise but elementwise. That means that after computing the linear portion of
+the layer, we can calculate each activation without looking at the values taken by the other
+hidden units.
+To build more general MLPs, we can continue stacking such hidden layers, e.g., H(1) =
+𝜎1(XW(1)+b(1)) andH(2) = 𝜎2(H(1)W(2)+b(2)),oneatopanother, yieldingevermore
+expressive models.
+Universal Approximators
+We know that the brain is capable of very sophisticated statistical analysis. As such, it is
+worth asking, just how powerful a deep network could be. This question has been answered
+multiple times, e.g., in Cybenko (1989) in the context of MLPs, and in Micchelli (1984) in
+the context of reproducing kernel Hilbert spaces in a way that could be seen as radial basis
+function (RBF) networks with asingle hidden layer. These (and related results) suggest that
+even with a single-hidden-layer network, given enough nodes (possibly absurdly many),
+and the right set of weights, we can model any function. Actually learning that function
+is the hard part, though. You might think of your neural network as being a bit like the
+C programming language. The language, like any other modern language, is capable of
+171
+Multilayer Perceptrons
+expressing any computable program. But actually coming up with a program that meets
+your specifications is the hard part.
+Moreover, just because a single-hidden-layer network can learn any function does not mean
+that you should try to solve all of your problems with one. In fact, in this case kernel
+methods are way more effective, since they are capable of solving the problem exactly even
+in infinite dimensional spaces (Kimeldorf and Wahba, 1971, Schölkopf et al., 2001). In
+fact, we can approximate many functions much more compactly by using deeper (rather
+than wider) networks (Simonyan and Zisserman, 2014). We will touch upon more rigorous
+arguments in subsequent chapters.
+5.1.2 Activation Functions
+Activation functions decide whether a neuron should be activated or not by calculating the
+weighted sum and further adding bias to it. They are differentiable operators for trans
+forming input signals to outputs, while most of them add nonlinearity. Because activation
+functions are fundamental to deep learning, let’s briefly survey some common ones.
+ReLU Function
+The most popular choice, due to both simplicity of implementation and its good perfor
+mance on avariety of predictive tasks, is the rectified linear unit (ReLU) (Nair and Hinton,
+2010). ReLU provides a very simple nonlinear transformation. Given an element 𝑥, the
+function is defined as the maximum of that element and 0:
+ReLU(𝑥) = max(𝑥,0).
+(5.1.4)
+Informally, the ReLU function retains only positive elements and discards all negative el
+ements by setting the corresponding activations to 0. To gain some intuition, we can plot
+the function. As you can see, the activation function is piecewise linear.
+x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
+y = torch.relu(x)
+d2l.plot(x.detach(), y.detach(), 'x', 'relu(x)', figsize=(5, 2.5))
+When the input is negative, the derivative of the ReLU function is 0, and when the input
+is positive, the derivative of the ReLU function is 1. Note that the ReLU function is not
+172
+Multilayer Perceptrons
+differentiable when the input takes value precisely equal to 0. In these cases, we default to
+the left-hand-side derivative and say that the derivative is 0 when the input is 0. We can
+get away with this because the input may never actually be zero (mathematicians would say
+that it is nondifferentiable on a set of measure zero). There is an old adage that if subtle
+boundary conditions matter, we are probably doing (real) mathematics, not engineering.
+That conventional wisdom may apply here, or at least, the fact that we are not performing
+constrained optimization (Mangasarian, 1965, Rockafellar, 1970). We plot the derivative
+of the ReLU function below.
+y.backward(torch.ones_like(x), retain_graph=True)
+d2l.plot(x.detach(), x.grad, 'x', 'grad of relu', figsize=(5, 2.5))
+The reason for using ReLU is that its derivatives are particularly well behaved: either they
+vanish or they just let the argument through. This makes optimization better behaved and
+it mitigated the well-documented problem of vanishing gradients that plagued previous
+versions of neural networks (more on this later).
+Note that there are many variants to the ReLU function, including the parametrized ReLU
+(pReLU) function (He et al., 2015). This variation adds a linear term to ReLU, so some
+information still gets through, even when the argument is negative:
+pReLU(𝑥) = max(0,𝑥) + 𝛼min(0,𝑥).
+Sigmoid Function
+(5.1.5)
+The sigmoid function transforms those inputs whose values lie in the domain R, to outputs
+that lie on the interval (0, 1). For that reason, the sigmoid is often called a squashing func
+tion: it squashes any input in the range (-inf, inf) to some value in the range (0, 1):
+sigmoid(𝑥) =
+1
+1 +exp(−𝑥) .
+(5.1.6)
+In the earliest neural networks, scientists were interested in modeling biological neurons
+that either fire or do not fire. Thus the pioneers of this field, going all the way back to
+McCulloch and Pitts, the inventors of the artificial neuron, focused on thresholding units
+(McCulloch and Pitts, 1943). A thresholding activation takes value 0 when its input is
+below some threshold and value 1 when the input exceeds the threshold.
+173
+Multilayer Perceptrons
+When attention shifted to gradient-based learning, thesigmoidfunctionwasanaturalchoice
+because it is a smooth, differentiable approximation to a thresholding unit. Sigmoids are
+still widely used as activation functions on the output units when we want to interpret the
+outputs as probabilities for binary classification problems: you can think of the sigmoid as a
+special case of the softmax. However, the sigmoid has largely been replaced by the simpler
+and more easily trainable ReLU for most use in hidden layers. Much of this has to do with
+the fact that the sigmoid poses challenges for optimization (LeCun et al., 1998) since its
+gradient vanishes for large positive and negative arguments. This can lead to plateaus that
+are difficult to escape from. Nonetheless sigmoids are important. In later chapters (e.g.,
+Section 10.1) on recurrent neural networks, we will describe architectures that leverage
+sigmoid units to control the flow of information across time.
+Below, we plot the sigmoid function. Note that when the input is close to 0, the sigmoid
+function approaches a linear transformation.
+y = torch.sigmoid(x)
+d2l.plot(x.detach(), y.detach(), 'x', 'sigmoid(x)', figsize=(5, 2.5))
+The derivative of the sigmoid function is given by the following equation:
+𝑑
+𝑑𝑥 sigmoid(𝑥) =
+exp(−𝑥)
+(1 + exp(−𝑥))2 
+= sigmoid(𝑥) (1 − sigmoid(𝑥)) .
+(5.1.7)
+The derivative of the sigmoid function is plotted below. Note that when the input is 0, the
+derivative of the sigmoid function reaches a maximum of 0.25. As the input diverges from
+0 in either direction, the derivative approaches 0.
+# Clear out previous gradients
+x.grad.data.zero_()
+y.backward(torch.ones_like(x),retain_graph=True)
+d2l.plot(x.detach(), x.grad, 'x', 'grad of sigmoid', figsize=(5, 2.5))
+Tanh Function
+Like the sigmoid function, the tanh (hyperbolic tangent) function also squashes its inputs,
+transforming them into elements on the interval between −1 and 1:
+tanh(𝑥) = 1 −exp(−2𝑥)
+1 +exp(−2𝑥) .
+(5.1.8)
+174
+Multilayer Perceptrons
+We plot the tanh function below. Note that as input nears 0, the tanh function approaches a
+linear transformation. Although the shape of the function is similar to that of the sigmoid
+function, the tanh function exhibits point symmetry about the origin of the coordinate sys
+tem (Kalman and Kwasny, 1992).
+y = torch.tanh(x)
+d2l.plot(x.detach(), y.detach(), 'x', 'tanh(x)', figsize=(5, 2.5))
+The derivative of the tanh function is:
+𝑑
+𝑑𝑥 tanh(𝑥) = 1 −tanh2(𝑥).
+(5.1.9)
+It is plotted below. As the input nears 0, the derivative of the tanh function approaches a
+maximum of 1. And as we saw with the sigmoid function, as input moves away from 0 in
+either direction, the derivative of the tanh function approaches 0.
+# Clear out previous gradients
+x.grad.data.zero_()
+y.backward(torch.ones_like(x),retain_graph=True)
+d2l.plot(x.detach(), x.grad, 'x', 'grad of tanh', figsize=(5, 2.5))
+5.1.3 Summary and Discussion
+We now know how to incorporate nonlinearities to build expressive multilayer neural net
+work architectures. As a side note, your knowledge already puts you in command of a sim
+ilar toolkit to a practitioner circa 1990. In some ways, you have an advantage over anyone
+175
+Multilayer Perceptrons
+102
+working back then, because you can leverage powerful open-source deep learning frame
+works to build models rapidly, using only a few lines of code. Previously, training these
+networks required researchers to code up layers and derivatives explicitly in C, Fortran, or
+even Lisp (in the case of LeNet).
+A secondary benefit is that ReLU is significantly more amenable to optimization than the
+sigmoid or the tanh function. One could argue that this was one of the key innovations that
+helped the resurgence of deep learning over the past decade. Note, though, that research in
+activation functions has not stopped. For instance, the GELU (Gaussian error linear unit)
+activation function 𝑥Φ(𝑥) by Hendrycks and Gimpel (2016) (Φ(𝑥) is the standard Gaussian
+cumulative distribution function) and the Swish activation function 𝜎(𝑥) = 𝑥 sigmoid(𝛽𝑥)
+as proposed in Ramachandran et al. (2017) can yield better accuracy in many cases.
+5.1.4 Exercises
+1. Show that adding layers to a linear deep network, i.e., a network without nonlinearity
+𝜎 can never increase the expressive power of the network. Give an example where it
+actively reduces it.
+2. Compute the derivative of the pReLU activation function.
+3. Compute the derivative of the Swish activation function 𝑥 sigmoid(𝛽𝑥).
+4. Show that an MLP using only ReLU (or pReLU) constructs a continuous piecewise
+linear function.
+5. Sigmoid and tanh are very similar.
+1. Show that tanh(𝑥) + 1 = 2sigmoid(2𝑥).
+2. Prove that the function classes parametrized by both nonlinearities are identical.
+Hint: affine layers have bias terms, too.
+6. Assume that we have a nonlinearity that applies to one minibatch at a time, such as the
+batch normalization (Ioffe and Szegedy, 2015). What kinds of problems do you expect
+this to cause?
+7. Provide an example where the gradients vanish for the sigmoid activation function.
+Discussions102.
+176
+Multilayer Perceptrons
+5.2 Implementation of Multilayer Perceptrons
+Multilayer perceptrons (MLPs)arenotmuchmorecomplextoimplementthansimplelinear
+models. The key conceptual difference is that we now concatenate multiple layers.
+import torch
+from torch import nn
+from d2l import torch as d2l
+5.2.1 Implementation from Scratch
+Let’s begin again by implementing such a network from scratch.
+Initializing Model Parameters
+Recall that Fashion-MNIST contains 10 classes, and that each image consists of a 28 ×
+28 = 784 grid of grayscale pixel values. As before we will disregard the spatial structure
+among the pixels for now, so we can think of this as a classification dataset with 784 input
+features and 10classes. Tobegin, wewillimplementanMLPwithonehiddenlayerand256
+hidden units. Both the number of layers and their width are adjustable (they are considered
+hyperparameters). Typically, we choose the layer widths to be divisible by larger powers of
+2. This is computationally efficient due to the way memory is allocated and addressed in
+hardware.
+Again, we will represent our parameters with several tensors. Note that for every layer, we
+must keep track of one weight matrix and one bias vector. As always, we allocate memory
+for the gradients of the loss with respect to these parameters.
+In the code below we use nn.Parameter to automatically register a class attribute as a
+parameter to be tracked by autograd (Section 2.5).
+class MLPScratch(d2l.Classifier):
+def __init__(self, num_inputs, num_outputs, num_hiddens, lr, sigma=0.01):
+super().__init__()
+self.save_hyperparameters()
+self.W1 = nn.Parameter(torch.randn(num_inputs, num_hiddens) * sigma)
+self.b1 = nn.Parameter(torch.zeros(num_hiddens))
+self.W2 = nn.Parameter(torch.randn(num_hiddens, num_outputs) * sigma)
+self.b2 = nn.Parameter(torch.zeros(num_outputs))
+Model
+To make sure we know how everything works, we will implement the ReLU activation
+ourselves rather than invoking the built-in relu function directly.
+177
+Implementation of Multilayer Perceptrons
+def relu(X):
+a = torch.zeros_like(X)
+return torch.max(X, a)
+Since we are disregarding spatial structure, we reshape each two-dimensional image into
+a flat vector of length num_inputs. Finally, we implement our model with just a few lines
+of code. Since we use the framework built-in autograd this is all that it takes.
+@d2l.add_to_class(MLPScratch)
+def forward(self, X):
+X = X.reshape((-1, self.num_inputs))
+H = relu(torch.matmul(X, self.W1) + self.b1)
+return torch.matmul(H, self.W2) + self.b2
+Training
+Fortunately, the training loop for MLPs is exactly the same as for softmax regression.
+We define the model, data, and trainer, then finally invoke the fit method on model and
+data.
+model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
+data = d2l.FashionMNIST(batch_size=256)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+5.2.2 Concise Implementation
+As you might expect, by relying on the high-level APIs, we can implement MLPs even
+more concisely.
+Model
+Comparedwithour conciseimplementation ofsoftmax regressionimplementation(Section
+4.5), the onlydifferenceisthatweaddtwofullyconnectedlayerswherewepreviouslyadded
+only one. The first is the hidden layer, the second is the output layer.
+178
+Multilayer Perceptrons
+class MLP(d2l.Classifier):
+def __init__(self, num_outputs, num_hiddens, lr):
+super().__init__()
+self.save_hyperparameters()
+self.net = nn.Sequential(nn.Flatten(), nn.LazyLinear(num_hiddens),
+nn.ReLU(), nn.LazyLinear(num_outputs))
+Previously, we defined forward methods for models to transform input using the model
+parameters. These operations are essentially a pipeline: you take an input and apply a
+transformation (e.g., matrix multiplication with weights followed by bias addition), then
+repetitively use the output of the current transformation as input to the next transforma
+tion. However, you may have noticed that no forward method is defined here. In fact,
+MLP inherits the forward method from the Module class (Section 3.2.2) to simply invoke
+self.net(X) (X is input), which is now defined as a sequence of transformations via the
+Sequential class. The Sequential class abstracts the forward process enabling us to fo
+cus on the transformations. We will further discuss how the Sequential class works in
+Section 6.1.2.
+Training
+The training loop is exactly the same as when we implemented softmax regression. This
+modularity enables us to separate matters concerning the model architecture from orthog
+onal considerations.
+model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
+trainer.fit(model, data)
+5.2.3 Summary
+Now that we have more practice in designing deep networks, the step from a single to mul
+tiple layers of deep networks does not pose such a significant challenge any longer. In
+particular, we can reuse the training algorithm and data loader. Note, though, that imple
+menting MLPs from scratch is nonetheless messy: naming and keeping track of the model
+parameters makes it difficult to extend models. For instance, imagine wanting to insert
+another layer between layers 42 and 43. This might now be layer 42b, unless we are willing
+179
+Implementation of Multilayer Perceptrons
+103
+to perform sequential renaming. Moreover, if we implement the network from scratch, it
+is much more difficult for the framework to perform meaningful performance optimiza
+tions.
+Nonetheless, you have now reached the state of the art of the late 1980s when fully con
+nected deep networks were the method of choice for neural network modeling. Our next
+conceptual step will be to consider images. Before we do so, we need to review a number
+of statistical basics and details on how to compute models efficiently.
+5.2.4 Exercises
+1. Change the number of hidden units num_hiddens and plot how its number affects the
+accuracy of the model. What is the best value of this hyperparameter?
+2. Try adding a hidden layer to see how it affects the results.
+3. Whyisitabadideatoinsertahiddenlayerwithasingleneuron? Whatcouldgowrong?
+4. Howdoeschanging the learning rate alter your results? With all other parameters fixed,
+which learning rate gives you the best results? How does this relate to the number of
+epochs?
+5. Let’s optimize over all hyperparameters jointly, i.e., learning rate, number of epochs,
+number of hidden layers, and number of hidden units per layer.
+1. What is the best result you can get by optimizing over all of them?
+2. Whyit is much more challenging to deal with multiple hyperparameters?
+3. Describe an efficient strategy for optimizing over multiple parameters jointly.
+6. Compare the speed of the framework and the from-scratch implementation for a chal
+lenging problem. How does it change with the complexity of the network?
+7. Measure the speed of tensor–matrix multiplications for well-aligned and misaligned
+matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and
+1032.
+1. Howdoes this change between GPUs and CPUs?
+2. Determine the memory bus width of your CPU and GPU.
+8. Try out different activation functions. Which one works best?
+9. Is there a difference between weight initializations of the network? Does it matter?
+Discussions103.
+180
+Multilayer Perceptrons
+5.3 Forward Propagation, Backward Propagation,
+and Computational Graphs
+So far, we have trained our models with minibatch stochastic gradient descent. However,
+when we implemented the algorithm, we only worried about the calculations involved in
+forward propagation through the model. When it came time to calculate the gradients, we
+just invoked the backpropagation function provided by the deep learning framework.
+The automatic calculation of gradients profoundly simplifies the implementation of deep
+learning algorithms. Before automatic differentiation, even small changes to complicated
+models required recalculating complicated derivatives by hand. Surprisingly often, aca
+demic papers had to allocate numerous pages to deriving update rules. While we must
+continue to rely on automatic differentiation so we can focus on the interesting parts, you
+ought to know how these gradients are calculated under the hood if you want to go beyond
+a shallow understanding of deep learning.
+In this section, we take a deep dive into the details of backward propagation (more com
+monly called backpropagation). To convey some insight for both the techniques and their
+implementations, we rely on some basic mathematics and computational graphs. To start,
+we focus our exposition on a one-hidden-layer MLP with weight decay (ℓ2 regularization,
+to be described in subsequent chapters).
+5.3.1 Forward Propagation
+Forward propagation (or forward pass) refers to the calculation and storage of intermediate
+variables (including outputs) for a neural network in order from the input layer to the output
+layer. We now work step-by-step through the mechanics of a neural network with one
+hidden layer. This mayseemtediousbutintheeternalwordsoffunkvirtuosoJamesBrown,
+you must “pay the cost to be the boss”.
+For the sake of simplicity, let’s assume that the input example is x ∈ R𝑑 and that our hidden
+layer does not include a bias term. Here the intermediate variable is:
+z = W(1)x,
+(5.3.1)
+where W(1) ∈ Rℎ×𝑑 is the weight parameter of the hidden layer. After running the inter
+mediate variable z ∈ Rℎ through the activation function 𝜙 we obtain our hidden activation
+vector of length ℎ:
+h = 𝜙(z).
+(5.3.2)
+The hidden layer output h is also an intermediate variable. Assuming that the parameters
+of the output layer possess only a weight of W(2) ∈ R𝑞×ℎ, we can obtain an output layer
+variable with a vector of length 𝑞:
+o =W(2)h.
+(5.3.3)
+181
+Forward Propagation, Backward Propagation, and Computational Graphs
+Fig. 5.3.1
+Assuming that the loss function is 𝑙 and the example label is 𝑦, we can then calculate the
+loss term for a single data example,
+(5.3.4)
+𝐿 =𝑙(o,𝑦).
+As we will see the definition of ℓ2 regularization to be introduced later, given the hyperpa
+rameter 𝜆, the regularization term is
+𝑠 = 𝜆
+2 W(1) 2
+F +W(2) 2
+F ,
+(5.3.5)
+where the Frobenius norm of the matrix is simply the ℓ2 norm applied after flattening the
+matrix into avector. Finally, the model’sregularizedlossonagivendataexampleis:
+𝐽 = 𝐿+𝑠.
+We refer to 𝐽 as the objective function in the following discussion.
+5.3.2 Computational Graph of Forward Propagation
+(5.3.6)
+Plotting computational graphs helps us visualize the dependencies of operators and vari
+ables within the calculation. Fig. 5.3.1 contains the graph associated with the simple net
+work described above, where squares denote variables and circles denote operators. The
+lower-left corner signifies the input and the upper-right corner is the output. Notice that
+the directions of the arrows (which illustrate data flow) are primarily rightward and up
+ward.
+Computational graph of forward propagation.
+5.3.3 Backpropagation
+Backpropagation refers to the method of calculating the gradient of neural network param
+eters. In short, the method traverses the network in reverse order, from the output to the
+input layer, according to the chain rule from calculus. The algorithm stores any interme
+diate variables (partial derivatives) required while calculating the gradient with respect to
+some parameters. Assume that we have functions Y = 𝑓 (X) and Z = 𝑔(Y), in which the
+input and the output X,Y,Z are tensors of arbitrary shapes. By using the chain rule, we can
+compute the derivative of Z with respect to X via
+𝜕Z
+𝜕X = prod 𝜕Z
+𝜕Y , 𝜕Y
+𝜕X .
+(5.3.7)
+Here we use the prod operator to multiply its arguments after the necessary operations,
+such as transposition and swapping input positions, have been carried out. For vectors,
+this is straightforward: it is simply matrix–matrix multiplication. For higher dimensional
+182 MultilayerPerceptrons
+tensors,weusetheappropriatecounterpart. Theoperatorprodhidesall thenotational
+overhead.
+Recall that theparametersofthesimplenetworkwithonehiddenlayer,whosecomputa
+tionalgraphisinFig.5.3.1,areW(1) andW(2). Theobjectiveofbackpropagationisto
+calculatethegradients𝜕𝐽/𝜕W(1) and𝜕𝐽/𝜕W(2).Toaccomplishthis,weapplythechain
+ruleandcalculate, inturn, thegradientofeachintermediatevariableandparameter.The
+orderofcalculationsarereversedrelativetothoseperformedinforwardpropagation,since
+weneedtostartwiththeoutcomeofthecomputationalgraphandworkourwaytowards
+theparameters.Thefirststepistocalculatethegradientsoftheobjectivefunction𝐽=𝐿+𝑠
+withrespecttothelossterm𝐿andtheregularizationterm𝑠:
+𝜕𝐽
+𝜕𝐿 =1and 𝜕𝐽
+𝜕𝑠 =1. (5.3.8)
+Next,wecomputethegradientof theobjectivefunctionwithrespect tovariableof the
+outputlayeroaccordingtothechainrule:
+𝜕𝐽
+𝜕o =prod 𝜕𝐽
+𝜕𝐿 , 𝜕𝐿
+𝜕o = 𝜕𝐿
+𝜕o ∈R𝑞. (5.3.9)
+Next,wecalculatethegradientsof theregularizationtermwithrespect tobothparame
+ters:
+𝜕𝑠
+𝜕W(1)
+=𝜆W(1) and 𝜕𝑠
+𝜕W(2)
+=𝜆W(2). (5.3.10)
+Nowweareabletocalculatethegradient𝜕𝐽/𝜕W(2) ∈R𝑞×ℎof themodelparameters
+closesttotheoutputlayer.Usingthechainruleyields:
+𝜕𝐽
+𝜕W(2)
+=prod 𝜕𝐽
+𝜕o , 𝜕o
+𝜕W(2)
++prod 𝜕𝐽
+𝜕𝑠 , 𝜕𝑠
+𝜕W(2)
+= 𝜕𝐽
+𝜕oh +𝜆W(2). (5.3.11)
+Toobtainthegradientwithrespect toW(1)weneedtocontinuebackpropagationalong
+theoutput layertothehiddenlayer. Thegradientwithrespect tothehiddenlayeroutput
+𝜕𝐽/𝜕h∈Rℎisgivenby
+𝜕𝐽
+𝜕h=prod 𝜕𝐽
+𝜕o , 𝜕o
+𝜕h =W(2) 𝜕𝐽
+𝜕o . (5.3.12)
+Sincetheactivationfunction𝜙applieselementwise,calculatingthegradient𝜕𝐽/𝜕z∈Rℎ
+oftheintermediatevariablezrequiresthatweusetheelementwisemultiplicationoperator,
+whichwedenoteby :
+𝜕𝐽
+𝜕z =prod 𝜕𝐽
+𝜕h , 𝜕h
+𝜕z = 𝜕𝐽
+𝜕h 𝜙 (z). (5.3.13)
+Finally,wecanobtainthegradient𝜕𝐽/𝜕W(1) ∈Rℎ×𝑑ofthemodelparametersclosestto
+theinputlayer.Accordingtothechainrule,weget
+𝜕𝐽
+𝜕W(1)
+=prod 𝜕𝐽
+𝜕z , 𝜕z
+𝜕W(1)
++prod 𝜕𝐽
+𝜕𝑠 , 𝜕𝑠
+𝜕W(1)
+= 𝜕𝐽
+𝜕zx +𝜆W(1). (5.3.14)
+183
+Forward Propagation, Backward Propagation, and Computational Graphs
+5.3.4 Training Neural Networks
+When training neural networks, forward and backward propagation depend on each other.
+In particular, for forward propagation, we traverse the computational graph in the direc
+tion of dependencies and compute all the variables on its path. These are then used for
+backpropagation where the compute order on the graph is reversed.
+Take the aforementioned simple network as an illustrative example. On the one hand, com
+puting the regularization term (5.3.5) during forward propagation depends on the current
+values of model parameters W(1) and W(2). Theyaregiven bythe optimization algorithm
+according to backpropagation in the most recent iteration. On the other hand, the gradient
+calculation for the parameter (5.3.11) during backpropagation depends on the current value
+of the hidden layer output h, which is given by forward propagation.
+Therefore when training neural networks, once model parameters are initialized, we alter
+nate forward propagation with backpropagation, updating model parameters using gradi
+ents given by backpropagation. Note that backpropagation reuses the stored intermediate
+values from forward propagation to avoid duplicate calculations. One of the consequences
+is that we need to retain the intermediate values until backpropagation is complete. This is
+also one of the reasons why training requires significantly more memory than plain predic
+tion. Besides, the size of such intermediate values is roughly proportional to the number of
+network layers and the batch size. Thus, training deeper networks using larger batch sizes
+more easily leads to out-of-memory errors.
+5.3.5 Summary
+Forward propagation sequentially calculates and stores intermediate variables within the
+computational graph defined by the neural network. It proceeds from the input to the out
+put layer. Backpropagation sequentially calculates and stores the gradients of intermediate
+variables and parameters within the neural network in the reversed order. When training
+deep learning models, forward propagation and backpropagation are interdependent, and
+training requires significantly more memory than prediction.
+5.3.6 Exercises
+1. Assume that the inputs X to some scalar function 𝑓 are 𝑛 × 𝑚 matrices. What is the
+dimensionality of the gradient of 𝑓 with respect to X?
+2. Add a bias to the hidden layer of the model described in this section (you do not need
+to include bias in the regularization term).
+1. Draw the corresponding computational graph.
+2. Derive the forward and backward propagation equations.
+3. Computethememoryfootprintfortraining and prediction in the model described in this
+section.
+4. Assume that you want to compute second derivatives. What happens to the computa
+tional graph? How long do you expect the calculation to take?
+184 MultilayerPerceptrons
+104
+5. AssumethatthecomputationalgraphistoolargeforyourGPU.
+1. CanyoupartitionitovermorethanoneGPU?
+2.Whataretheadvantagesanddisadvantagesovertrainingonasmallerminibatch?
+Discussions104.
+5.4NumericalStabilityandInitialization
+Thusfar,everymodelthatwehaveimplementedrequiredthatweinitializeitsparameters
+accordingtosomepre-specifieddistribution.Untilnow,wetooktheinitializationscheme
+forgranted,glossingoverthedetailsofhowthesechoicesaremade.Youmighthaveeven
+gottentheimpressionthatthesechoicesarenotespeciallyimportant.Onthecontrary,the
+choiceof initializationschemeplaysasignificant roleinneuralnetworklearning,andit
+canbecrucialformaintainingnumericalstability.Moreover, thesechoicescanbetiedup
+ininterestingwayswiththechoiceof thenonlinearactivationfunction.Whichfunction
+wechooseandhowweinitializeparameterscandeterminehowquicklyouroptimization
+algorithmconverges.Poorchoicesherecancauseustoencounterexplodingorvanishing
+gradientswhiletraining. Inthissection,wedelveintothesetopicsingreaterdetailand
+discusssomeusefulheuristics thatyouwillfinduseful throughoutyourcareer indeep
+learning.
+%matplotlibinline
+importtorch
+fromd2l import torchasd2l
+5.4.1VanishingandExplodingGradients
+Consideradeepnetworkwith𝐿layers,inputxandoutputo.Witheachlayer𝑙definedby
+atransformation 𝑓𝑙 parametrizedbyweightsW(𝑙),whosehiddenlayeroutput ish(𝑙) (let
+h(0)=x),ournetworkcanbeexpressedas:
+h(𝑙) = 𝑓𝑙(h(𝑙−1))andthuso= 𝑓𝐿◦···◦ 𝑓1(x). (5.4.1)
+Ifallthehiddenlayeroutputandtheinputarevectors,wecanwritethegradientofowith
+respecttoanysetofparametersW(𝑙) asfollows:
+𝜕W(𝑙)o=𝜕h(𝐿−1)h(𝐿)
+M(𝐿) def=
+···𝜕h(𝑙)h(𝑙+1)
+M(𝑙+1) def=
+𝜕W(𝑙)h(𝑙)
+v(𝑙) def=
+.
+(5.4.2)
+Inotherwords, thisgradient is theproductof𝐿−𝑙matricesM(𝐿) ···M(𝑙+1) andthe
+gradientvectorv(𝑙).Thuswearesusceptibletothesameproblemsofnumericalunderflow
+thatoftencropupwhenmultiplyingtogethertoomanyprobabilities.Whendealingwith
+probabilities,acommontrickistoswitchintolog-space, i.e., shiftingpressurefromthe
+185
+Numerical Stability and Initialization
+mantissa to the exponent of the numericalrepresentation. Unfortunately, ourproblemabove
+is more serious: initially the matrices M(𝑙) may have a wide variety of eigenvalues. They
+might be small or large, and their product might be very large or very small.
+The risks posed by unstable gradients go beyond numerical representation. Gradients of
+unpredictable magnitude also threaten the stability of our optimization algorithms. We may
+be facing parameter updates that are either (i) excessively large, destroying our model (the
+exploding gradient problem); or (ii) excessively small (the vanishing gradient problem),
+rendering learning impossible as parameters hardly move on each update.
+Vanishing Gradients
+One frequent culprit causing the vanishing gradient problem is the choice of the activation
+function 𝜎 that is appended following each layer’s linear operations. Historically, the sig
+moid function 1/(1+exp(−𝑥)) (introducedinSection5.1)waspopularbecauseitresembles
+a thresholding function. Since early artificial neural networks were inspired by biological
+neural networks, the idea of neurons that fire either fully or not at all (like biological neu
+rons) seemed appealing. Let’s take a closer look at the sigmoid to see why it can cause
+vanishing gradients.
+x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
+y = torch.sigmoid(x)
+y.backward(torch.ones_like(x))
+d2l.plot(x.detach().numpy(), [y.detach().numpy(), x.grad.numpy()],
+legend=['sigmoid', 'gradient'], figsize=(4.5, 2.5))
+As you can see, the sigmoid’s gradient vanishes both when its inputs are large and when
+they are small. Moreover, when backpropagating through many layers, unless we are in the
+Goldilocks zone, where the inputs to many of the sigmoids are close to zero, the gradients
+of the overall product may vanish. When our network boasts many layers, unless we are
+careful, the gradient will likely be cut off at some layer. Indeed, this problem used to plague
+deep network training. Consequently, ReLUs, which are more stable (but less neurally
+plausible), have emerged as the default choice for practitioners.
+186
+Multilayer Perceptrons
+Exploding Gradients
+The opposite problem, when gradients explode, can be similarly vexing. To illustrate this
+a bit better, we draw 100 Gaussian random matrices and multiply them with some initial
+matrix. For the scale that we picked (the choice of the variance 𝜎2 = 1), the matrix product
+explodes. When this happens because of the initialization of a deep network, we have no
+chance of getting a gradient descent optimizer to converge.
+M = torch.normal(0, 1, size=(4, 4))
+print('a single matrix \n',M)
+for i in range(100):
+M = M @ torch.normal(0, 1, size=(4, 4))
+print('after multiplying 100 matrices\n', M)
+a single matrix
+tensor([[-0.8755,-1.2171, 1.3316, 0.1357],
+[ 0.4399, 1.4073,-1.9131,-0.4608],
+[-2.1420, 0.3643,-0.5267, 1.0277],
+[-0.1734,-0.7549, 2.3024, 1.3085]])
+after multiplying 100 matrices
+tensor([[-2.9185e+23, 1.3915e+25,-1.1865e+25, 1.4354e+24],
+[ 4.9142e+23,-2.3430e+25, 1.9979e+25,-2.4169e+24],
+[ 2.6578e+23,-1.2672e+25, 1.0805e+25,-1.3072e+24],
+[-5.2223e+23, 2.4899e+25,-2.1231e+25, 2.5684e+24]])
+Breaking the Symmetry
+Another problem in neural network design is the symmetry inherent in their parametriza
+tion. Assume that we have a simple MLP with one hidden layer and two units. In this case,
+we could permute the weights W(1) of the first layer and likewise permute the weights of
+the output layer to obtain the same function. There is nothing special differentiating the
+first and second hidden units. In other words, we have permutation symmetry among the
+hidden units of each layer.
+This is more than just a theoretical nuisance. Consider the aforementioned one-hidden
+layer MLP with two hidden units. For illustration, suppose that the output layer transforms
+the two hidden units into only one output unit. Imagine what would happen if we initialized
+all the parameters of the hidden layer as W(1) = 𝑐 for some constant 𝑐. In this case, during
+forward propagation either hidden unit takes the same inputs and parameters producing the
+same activation which is fed to the output unit. During backpropagation, differentiating the
+output unit with respect to parameters W(1) gives a gradient all of whose elements take
+the same value. Thus, after gradient-based iteration (e.g., minibatch stochastic gradient de
+scent), all the elements of W(1) still take the same value. Such iterations would never break
+the symmetry on their own and we might never be able to realize the network’s expressive
+power. The hidden layer would behave as if it had only a single unit. Note that while mini
+batch stochastic gradient descent would not break this symmetry, dropout regularization
+(to be introduced later) would!
+187
+Numerical Stability and Initialization
+5.4.2 Parameter Initialization
+One way of addressing—or at least mitigating—the issues raised above is through care
+ful initialization. As we will see later, additional care during optimization and suitable
+regularization can further enhance stability.
+Default Initialization
+In the previous sections, e.g., in Section 3.5, we used a normal distribution to initialize the
+values of our weights. If we do not specify the initialization method, the framework will
+use a default random initialization method, which often works well in practice for moderate
+problem sizes.
+Xavier Initialization
+Let’s look at the scale distribution of an output 𝑜𝑖 for some fully connected layer without
+nonlinearities. With 𝑛in inputs 𝑥𝑗 and their associated weights 𝑤𝑖𝑗 for this layer, an output
+is given by
+𝑛in
+𝑜𝑖 =
+𝑗=1
+𝑤𝑖𝑗𝑥𝑗.
+(5.4.3)
+Theweights 𝑤𝑖𝑗 are all drawn independently from the same distribution. Furthermore, let’s
+assume that this distribution has zero mean and variance 𝜎2. Note that this does not mean
+that the distribution has to be Gaussian, just that the mean and variance need to exist. For
+now, let’s assume that the inputs to the layer 𝑥𝑗 also have zero meanandvariance 𝛾2 andthat
+they are independent of 𝑤𝑖𝑗 and independent of each other. In this case, we can compute
+the mean of 𝑜𝑖:
+𝑛in
+𝐸[𝑜𝑖] =
+=
+𝑗=1
+𝑛in
+𝑗=1
+= 0,
+and the variance:
+𝐸[𝑤𝑖𝑗𝑥𝑗]
+𝐸[𝑤𝑖𝑗]𝐸[𝑥𝑗]
+Var[𝑜𝑖] = 𝐸[𝑜2
+𝑖] − (𝐸[𝑜𝑖])2
+𝑛in
+=
+=
+𝑗=1
+𝑛in
+𝑗=1
+𝐸[𝑤2
+𝑖𝑗𝑥2
+𝑗] − 0
+𝐸[𝑤2
+𝑖𝑗]𝐸[𝑥2
+𝑗]
+= 𝑛in𝜎2𝛾2.
+(5.4.4)
+(5.4.5)
+One way to keep the variance fixed is to set 𝑛in𝜎2 = 1. Now consider backpropagation.
+There we face a similar problem, albeit with gradients being propagated from the layers
+188 MultilayerPerceptrons
+closertotheoutput.Usingthesamereasoningasforforwardpropagation,weseethatthe
+gradients’variancecanblowupunless𝑛out𝜎2 =1,where𝑛out isthenumberofoutputs
+of this layer. This leavesus inadilemma: wecannotpossiblysatisfybothconditions
+simultaneously. Instead,wesimplytrytosatisfy:
+1
+2 (𝑛in+𝑛out)𝜎2=1orequivalently𝜎= 2
+𝑛in+𝑛out
+. (5.4.6)
+Thisisthereasoningunderlyingthenow-standardandpracticallybeneficialXavierinitial
+ization,namedafterthefirstauthorofitscreators(GlorotandBengio,2010).Typically,the
+XavierinitializationsamplesweightsfromaGaussiandistributionwithzeromeanandvari
+ance𝜎2= 2
+𝑛in+𝑛out
+.Wecanalsoadaptthistochoosethevariancewhensamplingweights
+fromauniformdistribution.Notethattheuniformdistribution𝑈(−𝑎,𝑎)hasvariance 𝑎2
+3 .
+Plugging𝑎2
+3 intoourconditionon𝜎2promptsustoinitializeaccordingto
+𝑈− 6
+𝑛in+𝑛out
+, 6
+𝑛in+𝑛out
+. (5.4.7)
+Thoughtheassumptionfornonexistenceofnonlinearitiesintheabovemathematicalrea
+soningcanbeeasilyviolatedinneuralnetworks,theXavierinitializationmethodturnsout
+toworkwellinpractice.
+Beyond
+Thereasoningabovebarelyscratchesthesurfaceofmodernapproachestoparameterini
+tialization.Adeeplearningframeworkoftenimplementsoveradozendifferentheuristics.
+Moreover,parameter initializationcontinuestobeahotareaoffundamental researchin
+deeplearning.Amongtheseareheuristicsspecializedfortied(shared)parameters,super
+resolution,sequencemodels,andothersituations.Forinstance,Xiaoetal. (2018)demon
+stratedthepossibilityoftraining10,000-layerneuralnetworkswithoutarchitecturaltricks
+byusingacarefully-designedinitializationmethod.
+Ifthetopicinterestsyouwesuggestadeepdiveintothismodule’sofferings, readingthe
+papersthatproposedandanalyzedeachheuristic,andthenexploringthelatestpublications
+onthetopic. Perhapsyouwillstumbleacrossoreveninventacleverideaandcontribute
+animplementationtodeeplearningframeworks.
+5.4.3Summary
+Vanishingandexplodinggradientsarecommonissues indeepnetworks. Greatcarein
+parameter initializationis requiredtoensure thatgradientsandparameters remainwell
+controlled. Initializationheuristicsareneededtoensurethattheinitialgradientsareneither
+toolargenortoosmall.Randominitializationiskeytoensuringthatsymmetryisbroken
+beforeoptimization. Xavier initializationsuggests that, foreachlayer, varianceofany
+outputisnotaffectedbythenumberofinputs,andvarianceofanygradientisnotaffectedby
+thenumberofoutputs.ReLUactivationfunctionsmitigatethevanishinggradientproblem.
+Thiscanaccelerateconvergence.
+189
+Generalization in Deep Learning
+105
+5.4.4 Exercises
+1. Can you design other cases where a neural network might exhibit symmetry that needs
+breaking, besides the permutation symmetry in an MLP’s layers?
+2. Can we initialize all weight parameters in linear regression or in softmax regression to
+the same value?
+3. Look up analytic bounds on the eigenvalues of the product of two matrices. What does
+this tell you about ensuring that gradients are well conditioned?
+4. If we know that some terms diverge, can we fix this after the fact? Look at the paper on
+layerwise adaptive rate scaling for inspiration (You et al., 2017).
+Discussions105.
+5.5 Generalization in Deep Learning
+In Chapter 3 and Chapter 4, we tackled regression and classification problems by fitting
+linear models to training data. In both cases, we provided practical algorithms for finding
+the parameters that maximized the likelihood of the observed training labels. And then,
+towards the end of each chapter, we recalled that fitting the training data was only an in
+termediate goal. Our real quest all along was to discover general patterns on the basis
+of which we can make accurate predictions even on new examples drawn from the same
+underlying population. Machine learning researchers are consumers of optimization algo
+rithms. Sometimes, we must even develop new optimization algorithms. But at the end
+of the day, optimization is merely a means to an end. At its core, machine learning is a
+statistical discipline and we wish to optimize training loss only insofar as some statistical
+principle (known or unknown) leads the resulting models to generalize beyond the training
+set.
+On the bright side, it turns out that deep neural networks trained by stochastic gradient de
+scent generalize remarkably well across myriad prediction problems, spanning computer
+vision; natural language processing; time series data; recommender systems; electronic
+health records; protein folding; value function approximation in video games and board
+games; and numerous other domains. On the downside, if you were looking for a straight
+forward account of either the optimization story (why we can fit them to training data) or
+the generalization story (why the resulting models generalize to unseen examples), then you
+might want to pour yourself a drink. While our procedures for optimizing linear models
+and the statistical properties of the solutions are both described well by a comprehensive
+body of theory, our understanding of deep learning still resembles the wild west on both
+fronts.
+Both the theory and practice of deep learning are rapidly evolving, with theorists adopting
+new strategies to explain what’s going on, even as practitioners continue to innovate at
+190
+Multilayer Perceptrons
+a blistering pace, building arsenals of heuristics for training deep networks and a body of
+intuitions and folk knowledge that provide guidance for deciding which techniques to apply
+in which situations.
+The summary of the present moment is that the theory of deep learning has produced
+promising lines of attack and scattered fascinating results, but still appears far from a com
+prehensive account of both (i) why we are able to optimize neural networks and (ii) how
+models learned bygradient descent manage to generalize so well, evenonhigh-dimensional
+tasks. However, inpractice, (i) is seldom a problem(wecanalwaysfindparametersthatwill
+fit all of our training data) and thus understanding generalization is far the bigger problem.
+On the other hand, even absent the comfort of a coherent scientific theory, practitioners
+have developed a large collection of techniques that may help you to produce models that
+generalize well in practice. While no pithy summary can possibly do justice to the vast
+topic of generalization in deep learning, and while the overall state of research is far from
+resolved, we hope, in this section, to present a broad overview of the state of research and
+practice.
+5.5.1 Revisiting Overfitting and Regularization
+According to the “no free lunch” theorem of Wolpert and Macready (1995), any learn
+ing algorithm generalizes better on data with certain distributions, and worse with other
+distributions. Thus, given a finite training set, a model relies on certain assumptions: to
+achieve human-level performance it may be useful to identify inductive biases that reflect
+how humans think about the world. Such inductive biases show preferences for solutions
+with certain properties. For example, a deep MLP has an inductive bias towards building
+up a complicated function by the composition of simpler functions.
+With machine learning models encoding inductive biases, our approach to training them
+typically consists of two phases: (i) fit the training data; and (ii) estimate the generalization
+error (the true error on the underlying population) by evaluating the model on holdout data.
+The difference between our fit on the training data and our fit on the test data is called the
+generalization gap and when this is large, we say that our models overfit to the training data.
+In extreme cases of overfitting, we might exactly fit the training data, even when the test
+error remains significant. And in the classical view, the interpretation is that our models are
+too complex, requiring that we either shrink the number of features, the number of nonzero
+parameters learned, or the size of the parameters as quantified. Recall the plot of model
+complexity compared with loss (Fig. 3.6.1) from Section 3.6.
+However deep learning complicates this picture in counterintuitive ways. First, for classifi
+cation problems, our models are typically expressive enough to perfectly fit every training
+example, even in datasets consisting of millions (Zhang et al., 2021). In the classical pic
+ture, we might think that this setting lies on the far right extreme of the model complexity
+axis, and that any improvements in generalization error must come by way of regulariza
+tion, either by reducing the complexity of the model class, or byapplying apenalty, severely
+constraining the set of values that our parameters might take. But that is where things start
+to get weird.
+191
+Generalization in Deep Learning
+Strangely, for many deep learning tasks (e.g., image recognition and text classification) we
+are typically choosing among model architectures, all of which can achieve arbitrarily low
+training loss (and zero training error). Because all models under consideration achieve
+zero training error, the only avenue for further gains is to reduce overfitting. Even stranger,
+it is often the case that despite fitting the training data perfectly, we can actually reduce
+the generalization error further by making the model even more expressive, e.g., adding
+layers, nodes, or training for a larger number of epochs. Stranger yet, the pattern relating
+the generalization gap to the complexity of the model (as captured, for example, in the depth
+or width of the networks) can be non-monotonic, with greater complexity hurting at first
+but subsequently helping in a so-called “double-descent” pattern (Nakkiran et al., 2021).
+Thus the deep learning practitioner possesses a bag of tricks, some of which seemingly
+restrict the model in some fashion and others that seemingly make it even more expressive,
+and all of which, in some sense, are applied to mitigate overfitting.
+Complicating things even further, while the guarantees provided by classical learning the
+ory can be conservative even for classical models, they appear powerless to explain why
+it is that deep neural networks generalize in the first place. Because deep neural networks
+are capable of fitting arbitrary labels even for large datasets, and despite the use of famil
+iar methods such as ℓ2 regularization, traditional complexity-based generalization bounds,
+e.g., those based on the VC dimension or Rademacher complexity of a hypothesis class
+cannot explain why neural networks generalize.
+5.5.2 Inspiration from Nonparametrics
+Approaching deep learning for the first time, it is tempting to think of them as parametric
+models. After all, the models do have millions of parameters. When we update the models,
+we update their parameters. When we save the models, we write their parameters to disk.
+However, mathematics and computer science are riddled with counterintuitive changes of
+perspective, and surprising isomorphisms between seemingly different problems. While
+neural networks clearly have parameters, in some ways it can be more fruitful to think of
+them as behaving like nonparametric models. So what precisely makes a model nonpara
+metric? While the name covers a diverse set of approaches, one common theme is that
+nonparametric methods tend to have a level of complexity that grows as the amount of
+available data grows.
+Perhaps the simplest example of a nonparametric model is the 𝑘-nearest neighbor algorithm
+(we will cover more nonparametric models later, for example in Section 11.2). Here, at
+training time, the learner simply memorizes the dataset. Then, at prediction time, when
+confronted with a new point x, the learner looks up the 𝑘 nearest neighbors (the 𝑘 points
+x
+𝑖 that minimize some distance 𝑑(x,x𝑖)). When 𝑘 = 1, this algorithm is called 1-nearest
+neighbors, and the algorithm will always achieve a training error of zero. That however,
+does not mean that the algorithm will not generalize. In fact, it turns out that under some
+mild conditions, the 1-nearest neighbor algorithm is consistent (eventually converging to
+the optimal predictor).
+Note that 1-nearest neighbor requires that we specify some distance function 𝑑, or equiva
+lently, that we specify some vector-valued basis function 𝜙(x) for featurizing our data. For
+192
+Multilayer Perceptrons
+any choice of the distance metric, we will achieve zero training error and eventually reach
+an optimal predictor, but different distance metrics 𝑑 encode different inductive biases and
+with a finite amount of available data will yield different predictors. Different choices of
+the distance metric 𝑑 represent different assumptions about the underlying patterns and the
+performance of the different predictors will depend on how compatible the assumptions are
+with the observed data.
+In a sense, because neural networks are over-parametrized, possessing many more parame
+ters than are needed to fit the training data, they tend to interpolate the training data (fitting
+it perfectly) and thus behave, in some ways, more like nonparametric models. More re
+cent theoretical research has established deep connection between large neural networks
+and nonparametric methods, notably kernel methods. In particular, Jacot et al. (2018)
+demonstrated that in the limit, as multilayer perceptrons with randomly initialized weights
+grow infinitely wide, they become equivalent to (nonparametric) kernel methods for a spe
+cific choice of the kernel function (essentially, a distance function), which they call the
+neural tangent kernel. While current neural tangent kernel models may not fully explain
+the behavior of modern deep networks, their success as an analytical tool underscores the
+usefulness of nonparametric modeling for understanding the behavior of over-parametrized
+deep networks.
+5.5.3 Early Stopping
+While deep neural networks are capable of fitting arbitrary labels, even when labels are
+assigned incorrectly or randomly (Zhang et al., 2021), this capability only emerges over
+many iterations of training. A new line of work (Rolnick et al., 2017) has revealed that
+in the setting of label noise, neural networks tend to fit cleanly labeled data first and only
+subsequently to interpolate the mislabeled data. Moreover, it has been established that this
+phenomenon translates directly into a guarantee on generalization: whenever a model has
+fitted the cleanly labeled data but not randomly labeled examples included in the training
+set, it has in fact generalized (Garg et al., 2021).
+Together these findings help to motivate early stopping, a classic technique for regularizing
+deep neural networks. Here, rather than directly constraining the values of the weights, one
+constrains the number of epochs of training. The most common way to determine the
+stopping criterion is to monitor validation error throughout training (typically by checking
+once after each epoch) and to cut off training when the validation error has not decreased
+by more than some small amount 𝜖 for some number of epochs. This is sometimes called a
+patience criterion. As well as the potential to lead to better generalization in the setting of
+noisy labels, another benefit of early stopping is the time saved. Once the patience criterion
+is met, one can terminate training. For large models that might require days of training
+simultaneously across eight or more GPUs, well-tuned early stopping can save researchers
+days of time and can save their employers many thousands of dollars.
+Notably, when there is no label noise and datasets are realizable (the classes are truly sep
+arable, e.g., distinguishing cats from dogs), early stopping tends not to lead to significant
+improvements in generalization. On the other hand, when there is label noise, or intrinsic
+193
+Generalization in Deep Learning
+variability in the label (e.g., predicting mortality among patients), early stopping is crucial.
+Training models until they interpolate noisy data is typically a bad idea.
+5.5.4 Classical Regularization Methods for Deep Networks
+In Chapter 3, we described several classical regularization techniques for constraining the
+complexity of our models. In particular, Section 3.7 introduced a method called weight
+decay, whichconsistsofaddingaregularizationtermtothelossfunctioninordertopenalize
+large values of the weights. Depending on which weight norm is penalized this technique
+is known either as ridge regularization (for ℓ2 penalty) or lasso regularization (for an ℓ1
+penalty). In the classical analysis of these regularizers, they are considered as sufficiently
+restrictive on the values that the weights can take to prevent the model from fitting arbitrary
+labels.
+In deep learning implementations, weight decay remains a popular tool. However, re
+searchers have noted that typical strengths of ℓ2 regularization are insufficient to prevent the
+networks from interpolating the data (Zhang et al., 2021) and thus the benefits if interpreted
+as regularization might only make sense in combination with the early stopping criterion.
+Absent early stopping, it is possible that just like the number of layers or number of nodes
+(in deep learning) or the distance metric (in 1-nearest neighbor), these methods may lead to
+better generalization not because they meaningfully constrain the power of the neural net
+work but rather because they somehow encode inductive biases that are better compatible
+with the patterns found in datasets of interests. Thus, classical regularizers remain popular
+in deep learning implementations, even if the theoretical rationale for their efficacy may be
+radically different.
+Notably, deep learning researchers have also built on techniques first popularized in classi
+cal regularization contexts, such as adding noise to model inputs. In the next section we will
+introduce the famous dropout technique (invented by Srivastava et al. (2014)), which has
+become a mainstay of deep learning, even as the theoretical basis for its efficacy remains
+similarly mysterious.
+5.5.5 Summary
+Unlike classical linear models, which tend to have fewer parameters than examples, deep
+networks tend to be over-parametrized, and for most tasks are capable of perfectly fitting
+the training set. This interpolation regime challenges many hard fast-held intuitions. Func
+tionally, neural networks look like parametric models. But thinking of them as nonpara
+metric models can sometimes be a more reliable source of intuition. Because it is often
+the case that all deep networks under consideration are capable of fitting all of the train
+ing labels, nearly all gains must come by mitigating overfitting (closing the generalization
+gap). Paradoxically, the interventions that reduce the generalization gap sometimes appear
+to increase model complexity and at other times appear to decrease complexity. However,
+these methods seldom decrease complexity sufficiently for classical theory to explain the
+generalization of deep networks, and why certain choices lead to improved generalization
+remains for the most part a massive open question despite the concerted efforts of many
+brilliant researchers.
+194
+Multilayer Perceptrons
+106
+5.5.6 Exercises
+1. Inwhatsensedotraditionalcomplexity-basedmeasuresfailtoaccountforgeneralization
+of deep neural networks?
+2. Whymight early stopping be considered a regularization technique?
+3. Howdoresearchers typically determine the stopping criterion?
+4. What important factor seems to differentiate cases when early stopping leads to big
+improvements in generalization?
+5. Beyond generalization, describe another benefit of early stopping.
+Discussions106.
+5.6 Dropout
+Let’s think briefly about what we expect from a good predictive model. We want it to pe
+form well on unseen data. Classical generalization theory suggests that to close the gap
+between train and test performance, we should aim for a simple model. Simplicity can
+come in the form of a small number of dimensions. We explored this when discussing the
+monomial basis functions of linear models in Section 3.6. Additionally, as we saw when
+discussing weight decay (ℓ2 regularization) in Section 3.7, the (inverse) norm of the param
+eters also represents a useful measure of simplicity. Another useful notion of simplicity
+is smoothness, i.e., that the function should not be sensitive to small changes to its inputs.
+For instance, when we classify images, we would expect that adding some random noise to
+the pixels should be mostly harmless.
+Bishop (1995) formalized this idea when he proved that training with input noise is equiva
+lent to Tikhonov regularization. This work drew a clear mathematical connection between
+the requirement that a function be smooth (and thus simple), and the requirement that it be
+resilient to perturbations in the input.
+Then, Srivastava et al. (2014) developed a clever idea for how to apply Bishop’s idea to the
+internal layers of a network, too. Their idea, called dropout, involves injecting noise while
+computing each internal layer during forward propagation, and it has become a standard
+technique for training neural networks. The method is called dropout because we literally
+drop out some neurons during training. Throughout training, on each iteration, standard
+dropout consists of zeroing out some fraction of the nodes in each layer before calculating
+the subsequent layer.
+To be clear, we are imposing our own narrative with the link to Bishop. The original pa
+per on dropout offers intuition through a surprising analogy to sexual reproduction. The
+authors argue that neural network overfitting is characterized by a state in which each layer
+195
+Dropout
+relies on a specific pattern of activations in the previous layer, calling this condition co
+adaptation. Dropout, they claim, breaks up co-adaptation just as sexual reproduction is
+argued to break up co-adapted genes. While such an justification of this theory is cer
+tainly up for debate, the dropout technique itself has proved enduring, and various forms of
+dropout are implemented in most deep learning libraries.
+The key challenge is how to inject this noise. One idea is to inject it in an unbiased manner
+so that the expected value of each layer—while fixing the others—equals the value it would
+have taken absent noise. In Bishop’s work, he added Gaussian noise to the inputs to a linear
+model. At each training iteration, he added noise sampled from a distribution with mean
+zero 𝜖 ∼ N(0,𝜎2) to the input x, yielding a perturbed point x = x + 𝜖. In expectation,
+𝐸[x] = x.
+In standard dropout regularization, one zeros out some fraction of the nodes in each layer
+and then debiases each layer by normalizing by the fraction of nodes that were retained (not
+dropped out). In other words, with dropout probability 𝑝, each intermediate activation ℎ is
+replaced by a random variable ℎ as follows:
+ℎ = 0 with probability 𝑝
+ℎ
+1−𝑝
+otherwise
+By design, the expectation remains unchanged, i.e., 𝐸[ℎ] = ℎ.
+import torch
+from torch import nn
+from d2l import torch as d2l
+(5.6.1)
+5.6.1 Dropout in Practice
+Recall the MLP with a hidden layer and five hidden units from Fig. 5.1.1. When we apply
+dropout to a hidden layer, zeroing out each hidden unit with probability 𝑝, the result can
+be viewed as a network containing only a subset of the original neurons. In Fig. 5.6.1, ℎ2
+and ℎ5 are removed. Consequently, the calculation of the outputs no longer depends on ℎ2
+or ℎ5 and their respective gradient also vanishes when performing backpropagation. In this
+way, the calculation of the output layer cannot be overly dependent on any one element of
+ℎ1, . . . , ℎ5.
+Fig. 5.6.1
+MLP before and after dropout.
+196
+Multilayer Perceptrons
+Typically, we disable dropout at test time. Given a trained model and a new example,
+we do not drop out any nodes and thus do not need to normalize. However, there are
+some exceptions: some researchers use dropout at test time as a heuristic for estimating the
+uncertainty of neural network predictions: if the predictions agree across many different
+dropout outputs, then we might say that the network is more confident.
+5.6.2 Implementation from Scratch
+To implement the dropout function for a single layer, we must draw as many samples from a
+Bernoulli (binary) random variable as our layer has dimensions, where the random variable
+takes value 1 (keep) with probability 1 − 𝑝 and 0 (drop) with probability 𝑝. One easy way
+to implement this is to first draw samples from the uniform distribution 𝑈[0,1]. Then we
+can keep those nodes for which the corresponding sample is greater than 𝑝, dropping the
+rest.
+In the following code, weimplementadropout_layerfunctionthatdropsouttheelements
+in the tensor input X with probability dropout, rescaling the remainder as described above:
+dividing the survivors by 1.0-dropout.
+def dropout_layer(X, dropout):
+assert 0 <= dropout <= 1
+if dropout == 1: return torch.zeros_like(X)
+mask = (torch.rand(X.shape) > dropout).float()
+return mask * X / (1.0- dropout)
+We can test out the dropout_layer function on a few examples. In the following lines of
+code, we pass our input X through the dropout operation, with probabilities 0, 0.5, and 1,
+respectively.
+X = torch.arange(16, dtype = torch.float32).reshape((2, 8))
+print('dropout_p = 0:', dropout_layer(X, 0))
+print('dropout_p = 0.5:', dropout_layer(X, 0.5))
+print('dropout_p = 1:', dropout_layer(X, 1))
+dropout_p = 0: tensor([[ 0., 1., 2., 3., 4., 5., 6., 7.],
+[ 8., 9., 10., 11., 12., 13., 14., 15.]])
+dropout_p = 0.5: tensor([[ 0., 2., 0., 6., 8., 0., 0., 0.],
+[16., 18., 20., 22., 24., 26., 28., 30.]])
+dropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],
+[0., 0., 0., 0., 0., 0., 0., 0.]])
+Defining the Model
+Themodelbelow appliesdropout to theoutput ofeachhidden layer(following the activation
+function). We can set dropout probabilities for each layer separately. A common choice is
+to set a lower dropout probability closer to the input layer. We ensure that dropout is only
+active during training.
+197
+Dropout
+class DropoutMLPScratch(d2l.Classifier):
+def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
+dropout_1, dropout_2, lr):
+super().__init__()
+self.save_hyperparameters()
+self.lin1 = nn.LazyLinear(num_hiddens_1)
+self.lin2 = nn.LazyLinear(num_hiddens_2)
+self.lin3 = nn.LazyLinear(num_outputs)
+self.relu = nn.ReLU()
+def forward(self, X):
+H1 = self.relu(self.lin1(X.reshape((X.shape[0],-1))))
+if self.training:
+H1 = dropout_layer(H1, self.dropout_1)
+H2 = self.relu(self.lin2(H1))
+if self.training:
+H2 = dropout_layer(H2, self.dropout_2)
+return self.lin3(H2)
+Training
+The following is similar to the training of MLPs described previously.
+hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
+'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
+model = DropoutMLPScratch(**hparams)
+data = d2l.FashionMNIST(batch_size=256)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+5.6.3 Concise Implementation
+With high-level APIs, all we need to do is add a Dropout layer after each fully connected
+layer, passing in the dropout probability as the only argument to its constructor. During
+training, the Dropout layer will randomly drop out outputs of the previous layer (or equiv
+alently, the inputs to the subsequent layer) according to the specified dropout probability.
+When not in training mode, the Dropout layer simply passes the data through during test
+ing.
+198
+Multilayer Perceptrons
+class DropoutMLP(d2l.Classifier):
+def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
+dropout_1, dropout_2, lr):
+super().__init__()
+self.save_hyperparameters()
+self.net = nn.Sequential(
+nn.Flatten(), nn.LazyLinear(num_hiddens_1), nn.ReLU(),
+nn.Dropout(dropout_1), nn.LazyLinear(num_hiddens_2), nn.ReLU(),
+nn.Dropout(dropout_2), nn.LazyLinear(num_outputs))
+Next, we train the model.
+model = DropoutMLP(**hparams)
+trainer.fit(model, data)
+5.6.4 Summary
+Beyond controlling the number of dimensions and the size of the weight vector, dropout is
+yet another tool for avoiding overfitting. Often tools are used jointly. Note that dropout is
+used only during training: it replaces an activation ℎ with a random variable with expected
+value ℎ.
+5.6.5 Exercises
+1. What happens if you change the dropout probabilities for the first and second layers?
+In particular, what happens if you switch the ones for both layers? Design an experi
+ment to answer these questions, describe your results quantitatively, and summarize the
+qualitative takeaways.
+2. Increase the number of epochs and compare the results obtained when using dropout
+with those when not using it.
+3. What is the variance of the activations in each hidden layer when dropout is and is not
+applied? Draw a plot to show how this quantity evolves over time for both models.
+4. Whyis dropout not typically used at test time?
+5. Using the model in this section as an example, compare the effects of using dropout and
+199
+Predicting House Prices on Kaggle
+107
+weight decay. What happens when dropout and weight decay are used at the same time?
+Are the results additive? Are there diminished returns (or worse)? Do they cancel each
+other out?
+6. What happens if we apply dropout to the individual weights of the weight matrix rather
+than the activations?
+7. Invent another technique for injecting random noise at each layer that is different from
+the standard dropout technique. Can you develop a method that outperforms dropout on
+the Fashion-MNIST dataset (for a fixed architecture)?
+Discussions107.
+5.7 Predicting House Prices on Kaggle
+108
+Now that we have introduced some basic tools for building and training deep networks and
+regularizing them with techniques including weight decay and dropout, we are ready to
+put all this knowledge into practice by participating in a Kaggle competition. The house
+price prediction competition is a great place to start. The data is fairly generic and do not
+exhibit exotic structure that might require specialized models (as audio or video might).
+This dataset, collected by De Cock (2011), covers house prices in Ames, Iowa from the
+period 2006–2010. It is considerably larger than the famous Boston housing dataset108 of
+Harrison and Rubinfeld (1978), boasting both more examples and more features.
+In this section, we will walk you through details of data preprocessing, model design, and
+hyperparameter selection. We hope that through a hands-on approach, you will gain some
+intuitions that will guide you in your career as a data scientist.
+%matplotlib inline
+import pandas as pd
+import torch
+from torch import nn
+from d2l import torch as d2l
+5.7.1 Downloading Data
+Throughout the book, we will train and test models on various downloaded datasets. Here,
+we implement two utility functions for downloading and extracting zip or tar files. Again,
+we skip implementation details of such utility functions.
+def download(url, folder, sha1_hash=None):
+"""Download a file to folder and return the local filepath."""
+def extract(filename, folder):
+"""Extract a zip/tar file into folder."""
+200
+Multilayer Perceptrons
+109
+Fig. 5.7.1
+Fig. 5.7.2
+5.7.2 Kaggle
+Kaggle109 is a popular platform that hosts machine learning competitions. Each com
+petition centers on a dataset and many are sponsored by stakeholders who offer prizes to
+the winning solutions. The platform helps users to interact via forums and shared code,
+fostering both collaboration and competition. While leaderboard chasing often spirals out
+of control, with researchers focusing myopically on preprocessing steps rather than asking
+fundamental questions, there is also tremendous value in the objectivity of a platform that
+facilitates direct quantitative comparisons among competing approaches as well as code
+sharing so that everyone can learn what did and did not work. If you want to participate in
+a Kaggle competition, you will first need to register for an account (see Fig. 5.7.1).
+The Kaggle website.
+On the house price prediction competition page, as illustrated in Fig. 5.7.2, you can find
+the dataset (under the “Data” tab), submit predictions, and see your ranking, The URL is
+right here:
+https://www.kaggle.com/c/house-prices-advanced-regression-techniques
+The house price prediction competition page.
+5.7.3 Accessing and Reading the Dataset
+201
+Predicting House Prices on Kaggle
+Note that the competition data is separated into training and test sets. Each record includes
+the property value of the house and attributes such as street type, year of construction, roof
+type, basement condition, etc. The features consist of various data types. For example,
+the year of construction is represented by an integer, the roof type by discrete categorical
+assignments, and other features by floating point numbers. And here is where reality com
+plicates things: for some examples, some data is altogether missing with the missing value
+marked simply as “na”. The price of each house is included for the training set only (it is
+a competition after all). We will want to partition the training set to create a validation set,
+but we only get to evaluate our models on the official test set after uploading predictions to
+Kaggle. The “Data” tab on the competition tab in Fig. 5.7.2 has links for downloading the
+data.
+To get started, we will read in and process the data using pandas, which we introduced
+in Section 2.2. For convenience, we can download and cache the Kaggle housing dataset.
+If a file corresponding to this dataset already exists in the cache directory and its SHA-1
+matches sha1_hash, our code will use the cached file to avoid clogging up your Internet
+with redundant downloads.
+class KaggleHouse(d2l.DataModule):
+def __init__(self, batch_size, train=None, val=None):
+super().__init__()
+self.save_hyperparameters()
+if self.train is None:
+self.raw_train = pd.read_csv(d2l.download(
+d2l.DATA_URL + 'kaggle_house_pred_train.csv', self.root,
+sha1_hash='585e9cc93e70b39160e7921475f9bcd7d31219ce'))
+self.raw_val = pd.read_csv(d2l.download(
+d2l.DATA_URL + 'kaggle_house_pred_test.csv', self.root,
+sha1_hash='fa19780a7b011d9b009e8bff8e99922a8ee2eb90'))
+The training dataset includes 1460 examples, 80features, andonelabel, whilethevalidation
+data contains 1459 examples and 80 features.
+data = KaggleHouse(batch_size=64)
+print(data.raw_train.shape)
+print(data.raw_val.shape)
+Downloading ../data/kaggle_house_pred_train.csv from http://d2l-data.s3
+↩→accelerate.amazonaws.com/kaggle_house_pred_train.csv...
+Downloading ../data/kaggle_house_pred_test.csv from http://d2l-data.s3
+↩→accelerate.amazonaws.com/kaggle_house_pred_test.csv...
+(1460, 81)
+(1459, 80)
+5.7.4 Data Preprocessing
+Let’s take a look at the first four and final two features as well as the label (SalePrice) from
+the first four examples.
+202
+Multilayer Perceptrons
+print(data.raw_train.iloc[:4, [0, 1, 2, 3,-3,-2,-1]])
+60
+Id MSSubClass MSZoning LotFrontage SaleType SaleCondition SalePrice
+0 1
+RL
+1 2
+2 3
+3 4
+20
+60
+RL
+RL
+65.0
+80.0
+WD
+Normal
+WD
+68.0
+70
+RL
+60.0
+WD
+WD
+Normal
+Normal
+Abnorml
+208500
+181500
+223500
+140000
+We can see that in each example, the first feature is the identifier. This helps the model
+determineeach training example. Whilethisisconvenient, itdoesnotcarryanyinformation
+for prediction purposes. Hence, we will remove it from the dataset before feeding the data
+into the model. Furthermore, given a wide variety of data types, we will need to preprocess
+the data before we can start modeling.
+Let’s start with the numerical features. First, we apply a heuristic, replacing all missing
+values by the corresponding feature’s mean. Then, to put all features on a common scale,
+we standardize the data by rescaling features to zero mean and unit variance:
+𝑥 ← 𝑥−𝜇
+𝜎 ,
+(5.7.1)
+where 𝜇 and 𝜎 denote mean and standard deviation, respectively. To verify that this indeed
+transforms our feature (variable) such that it has zero mean and unit variance, note that
+𝐸[𝑥−𝜇
+𝜎 ] = 𝜇−𝜇
+𝜎 = 0 and that 𝐸[(𝑥 − 𝜇)2] = (𝜎2 + 𝜇2) − 2𝜇2 + 𝜇2 = 𝜎2. Intuitively, we
+standardize the data for two reasons. First, it proves convenient for optimization. Second,
+because we do not knowa priori whichfeatures will be relevant, we do not want to penalize
+coefficients assigned to one feature more than any other.
+Next we deal with discrete values. These include features such as “MSZoning”. Wereplace
+them by a one-hot encoding in the same way that we earlier transformed multiclass labels
+into vectors (see Section 4.1.1). For instance, “MSZoning” assumes the values “RL” and
+“RM”. Dropping the “MSZoning” feature, two new indicator features “MSZoning_RL”
+and “MSZoning_RM” are created with values being either 0 or 1. According to one-hot
+encoding, if the original value of “MSZoning” is “RL”, then “MSZoning_RL” is 1 and
+“MSZoning_RM” is 0. The pandas package does this automatically for us.
+@d2l.add_to_class(KaggleHouse)
+def preprocess(self):
+# Remove the ID and label columns
+label = 'SalePrice'
+features = pd.concat(
+(self.raw_train.drop(columns=['Id', label]),
+self.raw_val.drop(columns=['Id'])))
+# Standardize numerical columns
+numeric_features = features.dtypes[features.dtypes!='object'].index
+features[numeric_features] = features[numeric_features].apply(
+lambda x: (x- x.mean()) / (x.std()))
+# Replace NAN numerical features by 0
+features[numeric_features] = features[numeric_features].fillna(0)
+(continues on next page)
+203
+Predicting House Prices on Kaggle
+(continued from previous page)
+# Replace discrete features by one-hot encoding
+features = pd.get_dummies(features, dummy_na=True)
+# Save preprocessed features
+self.train = features[:self.raw_train.shape[0]].copy()
+self.train[label] = self.raw_train[label]
+self.val = features[self.raw_train.shape[0]:].copy()
+You can see that this conversion increases the number of features from 79 to 331 (excluding
+ID and label columns).
+data.preprocess()
+data.train.shape
+(1460, 331)
+5.7.5 Error Measure
+To get started we will train a linear model with squared loss. Not surprisingly, our linear
+model will not lead to a competition-winning submission but it does provide a sanity check
+to see whether there is meaningful information in the data. If we cannot do better than
+random guessing here, then there might be a good chance that we have a data processing
+bug. And if things work, the linear model will serve as a baseline giving us some intuition
+about how close the simple model gets to the best reported models, giving us a sense of
+how much gain we should expect from fancier models.
+With house prices, as with stock prices, we care about relative quantities more than ab
+solute quantities. Thus we tend to care more about the relative error 𝑦−ˆ𝑦
+𝑦 than about the
+absolute error 𝑦 − ˆ𝑦. For instance, if our prediction is off by $100,000 when estimating the
+price of a house in rural Ohio, where the value of a typical house is $125,000, then we are
+probably doing a horrible job. On the other hand, if we err by this amount in Los Altos
+Hills, California, this might represent a stunningly accurate prediction (there, the median
+house price exceeds $4 million).
+Oneway to address this problem is to measure the discrepancy in the logarithm of the price
+estimates. In fact, this is also the official error measure used by the competition to evaluate
+the quality of submissions. After all, a small value 𝛿 for | log 𝑦 − log ˆ𝑦| ≤ 𝛿 translates into
+𝑒−𝛿 ≤ ˆ𝑦
+𝑦 ≤ 𝑒𝛿. Thisleadstothefollowing root-mean-squared-error between the logarithm
+of the predicted price and the logarithm of the label price:
+1
+𝑛
+@d2l.add_to_class(KaggleHouse)
+def get_dataloader(self, train):
+𝑛
+𝑖=1
+(log 𝑦𝑖 − log ˆ𝑦𝑖)2.
+(5.7.2)
+(continues on next page)
+204
+Multilayer Perceptrons
+(continued from previous page)
+label = 'SalePrice'
+data = self.train if train else self.val
+if label not in data: return
+get_tensor = lambda x: torch.tensor(x.values.astype(float),
+dtype=torch.float32)
+# Logarithm of prices
+tensors = (get_tensor(data.drop(columns=[label])), # X
+torch.log(get_tensor(data[label])).reshape((-1, 1))) # Y
+return self.get_tensorloader(tensors, train)
+5.7.6 𝐾-Fold Cross-Validation
+You might recall that we introduced cross-validation in Section 3.6.3, where we discussed
+how to deal with model selection. We will put this to good use to select the model design
+and to adjust the hyperparameters. We first need a function that returns the 𝑖th fold of the
+data in a 𝐾-fold cross-validation procedure. It proceeds by slicing out the 𝑖th segment as
+validation data and returning the rest as training data. Note that this is not the most efficient
+way of handling data and wewould definitely do something much smarter if our dataset was
+considerably larger. But this added complexity might obfuscate our code unnecessarily so
+we can safely omit it here owing to the simplicity of our problem.
+def k_fold_data(data, k):
+rets = []
+fold_size = data.train.shape[0] // k
+for j in range(k):
+idx = range(j * fold_size, (j+1) * fold_size)
+rets.append(KaggleHouse(data.batch_size, data.train.drop(index=idx),
+data.train.loc[idx]))
+return rets
+Theaveragevalidation error is returned whenwe train 𝐾 timesinthe 𝐾-foldcross-validation.
+def k_fold(trainer, data, k, lr):
+val_loss, models = [], []
+for i, data_fold in enumerate(k_fold_data(data, k)):
+model = d2l.LinearRegression(lr)
+model.board.yscale='log'
+if i != 0: model.board.display = False
+trainer.fit(model, data_fold)
+val_loss.append(float(model.board.data['val_loss'][-1].y))
+models.append(model)
+print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+return models
+5.7.7 Model Selection
+In this example, we pick an untuned set of hyperparameters and leave it up to the reader to
+improve the model. Findingagoodchoicecantaketime, dependingonhowmanyvariables
+one optimizes over. With a large enough dataset, and the normal sorts of hyperparameters,
+205
+Predicting House Prices on Kaggle
+𝐾-fold cross-validation tends to be reasonably resilient against multiple testing. However,
+if we try an unreasonably large number of options we might find that our validation perfor
+mance is no longer representative of the true error.
+trainer = d2l.Trainer(max_epochs=10)
+models = k_fold(trainer, data, k=5, lr=0.01)
+average validation log mse = 0.17325432986021042
+Notice that sometimes the number of training errors for a set of hyperparameters can be very
+low, even as the number of errors on 𝐾-fold cross-validation grows considerably higher.
+This indicates that we are overfitting. Throughout training you will want to monitor both
+numbers. Less overfitting might indicate that our data can support a more powerful model.
+Massive overfitting might suggest that we can gain by incorporating regularization tech
+niques.
+5.7.8 Submitting Predictions on Kaggle
+Now that we know what a good choice of hyperparameters should be, we might calculate
+the average predictions on the test set by all the 𝐾 models. Saving the predictions in a csv
+file will simplify uploading the results to Kaggle. The following code will generate a file
+called submission.csv.
+preds = [model(torch.tensor(data.val.values.astype(float), dtype=torch.
+↩→float32))
+for model in models]
+# Taking exponentiation of predictions in the logarithm scale
+ensemble_preds = torch.exp(torch.cat(preds, 1)).mean(1)
+submission = pd.DataFrame({'Id':data.raw_val.Id,
+'SalePrice':ensemble_preds.detach().numpy()})
+submission.to_csv('submission.csv', index=False)
+Next, as demonstrated in Fig. 5.7.3, we can submit our predictions on Kaggle and see how
+they compare with the actual house prices (labels) on the test set. The steps are quite
+simple:
+• Login to the Kaggle website and visit the house price prediction competition page.
+206
+Multilayer Perceptrons
+Fig. 5.7.3
+110
+• Click the “Submit Predictions” or “Late Submission” button.
+• Click the “Upload Submission File” button in the dashed box at the bottom of the page
+and select the prediction file you wish to upload.
+• Click the “Make Submission” button at the bottom of the page to view your results.
+Submitting data to Kaggle
+5.7.9 Summary and Discussion
+Real data often contains a mix of different data types and needs to be preprocessed. Rescal
+ing real-valued data to zero mean and unit variance is a good default. So is replacing miss
+ing values with their mean. Furthermore, transforming categorical features into indicator
+features allows us to treat them like one-hot vectors. When we tend to care more about the
+relative error than about the absolute error, we can measure the discrepancy in the loga
+rithm of the prediction. To select the model and adjust the hyperparameters, we can use
+𝐾-fold cross-validation .
+5.7.10 Exercises
+1. Submit your predictions for this section to Kaggle. How good are they?
+2. Is it always a good idea to replace missing values by a mean? Hint: can you construct a
+situation where the values are not missing at random?
+3. Improve the score by tuning the hyperparameters through 𝐾-fold cross-validation.
+4. Improve the score by improving the model (e.g., layers, weight decay, and dropout).
+5. What happens if we do not standardize the continuous numerical features as we have
+done in this section?
+Discussions110.

@@ -1,0 +1,1042 @@
+4.4 Softmax Regression Implementation from
+Scratch
+Because softmax regression is so fundamental, we believe that you ought to know how to
+implement it yourself. Here, we limit ourselves to defining the softmax-specific aspects of
+the model and reuse the other components from our linear regression section, including the
+training loop.
+import torch
+from d2l import torch as d2l
+4.4.1 The Softmax
+Let’s begin with the most important part: the mapping from scalars to probabilities. For a
+refresher, recall the operation of the sum operator along specific dimensions in a tensor, as
+discussed in Section 2.3.6 and Section 2.3.7. Given a matrix X wecansumoverallelements
+(by default) or only over elements in the same axis. The axis variable lets us compute row
+and column sums:
+X = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+X.sum(0, keepdims=True), X.sum(1, keepdims=True)
+(tensor([[5., 7., 9.]]),
+tensor([[ 6.],
+[15.]]))
+Computing the softmax requires three steps: (i) exponentiation of each term; (ii) a sum
+over each row to compute the normalization constant for each example; (iii) division of
+each row by its normalization constant, ensuring that the result sums to 1:
+softmax(X)𝑖𝑗 = exp(X𝑖𝑗)
+𝑘 exp(X𝑖𝑘) .
+96
+(4.4.1)
+The (logarithm of the) denominator is called the (log) partition function. It was introduced
+in statistical physics96 to sum over all possible states in a thermodynamic ensemble. The
+implementation is straightforward:
+def softmax(X):
+X_exp = torch.exp(X)
+partition = X_exp.sum(1, keepdims=True)
+return X_exp / partition # The broadcasting mechanism is applied here
+For any input X, we turn each element into a nonnegative number. Each row sums up to
+1, as is required for a probability. Caution: the code above is not robust against very large
+or very small arguments. While it is sufficient to illustrate what is happening, you should
+141
+Softmax Regression Implementation from Scratch
+not use this code verbatim for any serious purpose. Deep learning frameworks have such
+protections built in and we will be using the built-in softmax going forward.
+X = torch.rand((2, 5))
+X_prob = softmax(X)
+X_prob, X_prob.sum(1)
+(tensor([[0.2511, 0.1417, 0.1158, 0.2529, 0.2385],
+[0.2004, 0.1419, 0.1957, 0.2504, 0.2117]]),
+tensor([1., 1.]))
+4.4.2 The Model
+We now have everything that we need to implement the softmax regression model. As in
+our linear regression example, each instance will be represented by a fixed-length vector.
+Since the raw data here consists of 28 × 28 pixel images, we flatten each image, treating
+them as vectors of length 784. In later chapters, we will introduce convolutional neural
+networks, which exploit the spatial structure in a more satisfying way.
+In softmax regression, the number of outputs from our network should be equal to the
+number of classes. Since our dataset has 10 classes, our network has an output dimension
+of 10. Consequently, our weights constitute a 784 × 10 matrix plus a 1 × 10 row vector for
+the biases. As with linear regression, we initialize the weights W with Gaussian noise. The
+biases are initialized as zeros.
+class SoftmaxRegressionScratch(d2l.Classifier):
+def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
+super().__init__()
+self.save_hyperparameters()
+self.W = torch.normal(0, sigma, size=(num_inputs, num_outputs),
+requires_grad=True)
+self.b = torch.zeros(num_outputs, requires_grad=True)
+def parameters(self):
+return [self.W, self.b]
+The code below defines how the network maps each input to an output. Note that we flatten
+each 28 × 28 pixel image in the batch into a vector using reshape before passing the data
+through our model.
+@d2l.add_to_class(SoftmaxRegressionScratch)
+def forward(self, X):
+X = X.reshape((-1, self.W.shape[0]))
+return softmax(torch.matmul(X, self.W) + self.b)
+4.4.3 The Cross-Entropy Loss
+Next we need to implement the cross-entropy loss function (introduced in Section 4.1.2).
+This may be the most common loss function in all of deep learning. At the moment, appli
+142
+Linear Neural Networks for Classification
+cations of deep learning easily cast as classification problems far outnumber those better
+treated as regression problems.
+Recall that cross-entropy takes the negative log-likelihood of the predicted probability as
+signed to the true label. For efficiency we avoid Python for-loops and use indexing instead.
+In particular, the one-hot encoding in y allows us to select the matching terms in ˆy.
+To see this in action we create sample data y_hat with 2examples of predicted probabilities
+over 3 classes and their corresponding labels y. The correct labels are 0 and 2 respectively
+(i.e., the first and third class). Using y as the indices of the probabilities in y_hat, we can
+pick out terms efficiently.
+y = torch.tensor([0, 2])
+y_hat = torch.tensor([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
+y_hat[[0, 1], y]
+tensor([0.1000, 0.5000])
+Nowwe can implement the cross-entropy loss function by averaging over the logarithms of
+the selected probabilities.
+def cross_entropy(y_hat, y):
+return-torch.log(y_hat[list(range(len(y_hat))), y]).mean()
+cross_entropy(y_hat, y)
+tensor(1.4979)
+@d2l.add_to_class(SoftmaxRegressionScratch)
+def loss(self, y_hat, y):
+return cross_entropy(y_hat, y)
+4.4.4 Training
+We reuse the fit methoddefinedinSection3.4totrain the model with 10 epochs. Notethat
+the number of epochs (max_epochs), the minibatch size (batch_size), and learning rate
+(lr) are adjustable hyperparameters. That means that while these values are not learned
+during our primary training loop, they still influence the performance of our model, both
+vis-à-vis training and generalization performance. In practice you will want to choose these
+values based on the validation split of the data and then, ultimately, to evaluate your final
+modelon thetest split. AsdiscussedinSection3.6.3, wewillregardthetestdataofFashion
+MNIST as the validation set, thus reporting validation loss and validation accuracy on this
+split.
+143
+Softmax Regression Implementation from Scratch
+data = d2l.FashionMNIST(batch_size=256)
+model = SoftmaxRegressionScratch(num_inputs=784, num_outputs=10, lr=0.1)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+4.4.5 Prediction
+Now that training is complete, our model is ready to classify some images.
+X, y = next(iter(data.val_dataloader()))
+preds = model(X).argmax(axis=1)
+preds.shape
+torch.Size([256])
+We aremore interested in the images we label incorrectly. Wevisualize them bycomparing
+their actual labels (first line of text output) with the predictions from the model (second line
+of text output).
+wrong = preds.type(y.dtype) != y
+X, y, preds = X[wrong], y[wrong], preds[wrong]
+labels = [a+'\n'+b for a, b in zip(
+data.text_labels(y), data.text_labels(preds))]
+data.visualize([X, y], labels=labels)
+4.4.6 Summary
+By now we are starting to get some experience with solving linear regression and classifi
+cation problems. With it, we have reached what would arguably be the state of the art of
+144
+Linear Neural Networks for Classification
+97
+1960–1970s of statistical modeling. In the next section, we will show you how to leverage
+deep learning frameworks to implement this model much more efficiently.
+4.4.7 Exercises
+1. Inthissection, wedirectly implemented thesoftmaxfunctionbasedonthemathematical
+definition of the softmaxoperation. AsdiscussedinSection4.1thiscancausenumerical
+instabilities.
+1. Test whether softmax still works correctly if an input has a value of 100.
+2. Test whether softmax still works correctly if the largest of all inputs is smaller than
+−100?
+3. Implement a fix by looking at the value relative to the largest entry in the argument.
+2. Implement a cross_entropy function that follows the definition of the cross-entropy
+loss function 𝑖 𝑦𝑖 log ˆ𝑦𝑖.
+1. Try it out in the code example of this section.
+2. Whydoyou think it runs more slowly?
+3. Should you use it? When would it make sense to?
+4. What do you need to be careful of? Hint: consider the domain of the logarithm.
+3. Is it always a good idea to return the most likely label? For example, would you do this
+for medical diagnosis? How would you try to address this?
+4. Assume that we want to use softmax regression to predict the next word based on some
+features. What are some problems that might arise from a large vocabulary?
+5. Experiment with the hyperparameters of the code in this section. In particular:
+1. Plot how the validation loss changes as you change the learning rate.
+2. Do the validation and training loss change as you change the minibatch size? How
+large or small do you need to go before you see an effect?
+Discussions97.
+4.5 Concise Implementation of Softmax Regression
+Just as high-level deep learning frameworks made it easier to implement linear regression
+(see Section 3.5), they are similarly convenient here.
+145
+Concise Implementation of Softmax Regression
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+4.5.1 Defining the Model
+As in Section 3.5, we construct our fully connected layer using the built-in layer. The built
+in __call__methodtheninvokesforwardwheneverweneedtoapplythenetworktosome
+input.
+We use a Flatten layer to convert the fourth-order tensor X to second order by keeping the
+dimensionality along the first axis unchanged.
+class SoftmaxRegression(d2l.Classifier): #@save
+"""The softmax regression model."""
+def __init__(self, num_outputs, lr):
+super().__init__()
+self.save_hyperparameters()
+self.net = nn.Sequential(nn.Flatten(),
+nn.LazyLinear(num_outputs))
+def forward(self, X):
+return self.net(X)
+4.5.2 Softmax Revisited
+In Section 4.4 we calculated our model’s output and applied the cross-entropy loss. While
+this is perfectly reasonable mathematically, it is risky computationally, because of numer
+ical underflow and overflow in the exponentiation.
+Recall that the softmax function computes probabilities via ˆ𝑦𝑗 = exp(𝑜𝑗)
+𝑘 exp(𝑜𝑘) . If some of the
+𝑜𝑘 are very large, i.e., very positive, then exp(𝑜𝑘) might be larger than the largest number
+we can have for certain data types. This is called overflow. Likewise, if every argument is
+a very large negative number, we will get underflow. For instance, single precision floating
+point numbers approximately cover the range of 10−38 to 1038. As such, if the largest term
+in o lies outside the interval [−90,90], the result will not be stable. A way round this
+problem is to subtract ¯𝑜 def
+= max𝑘 𝑜𝑘 from all entries:
+ˆ
+𝑦𝑗 = exp𝑜𝑗
+𝑘 exp 𝑜𝑘 
+= exp(𝑜𝑗 − ¯𝑜)exp ¯𝑜
+𝑘 exp(𝑜𝑘 − ¯𝑜) exp ¯𝑜 = exp(𝑜𝑗 − ¯𝑜)
+𝑘 exp(𝑜𝑘 − ¯𝑜) .
+(4.5.1)
+By construction we know that 𝑜𝑗 − ¯𝑜 ≤ 0 for all 𝑗. As such, for a 𝑞-class classification
+problem, the denominator is contained in the interval [1,𝑞]. Moreover, the numerator
+never exceeds 1, thus preventing numerical overflow. Numerical underflow only occurs
+when exp(𝑜𝑗 − ¯𝑜) numerically evaluates as 0. Nonetheless, a few steps down the road we
+might find ourselves in trouble when we want to compute log ˆ𝑦𝑗 as log0. In particular, in
+backpropagation, we might find ourselves faced with a screenful of the dreaded NaN (Not a
+Number) results.
+146
+Linear Neural Networks for Classification
+98
+Fortunately, we are saved by the fact that even though we are computing exponential func
+tions, we ultimately intend to take their log (when calculating the cross-entropy loss). By
+combining softmax and cross-entropy, we can escape the numerical stability issues alto
+gether. We have:
+log ˆ𝑦𝑗 = log exp(𝑜𝑗 − ¯𝑜)
+𝑘 exp(𝑜𝑘 − ¯𝑜) = 𝑜𝑗 − ¯𝑜 −log
+𝑘 
+exp(𝑜𝑘 − ¯𝑜).
+(4.5.2)
+This avoids both overflow and underflow. We will want to keep the conventional softmax
+function handy in case we ever want to evaluate the output probabilities by our model. But
+instead of passing softmax probabilities into our new loss function, we just pass the logits
+andcompute thesoftmaxand its log all at once inside the cross-entropy lossfunction, which
+does smart things like the “LogSumExp trick”98.
+@d2l.add_to_class(d2l.Classifier) #@save
+def loss(self, Y_hat, Y, averaged=True):
+Y_hat = Y_hat.reshape((-1, Y_hat.shape[-1]))
+Y = Y.reshape((-1,))
+return F.cross_entropy(
+Y_hat, Y, reduction='mean' if averaged else 'none')
+4.5.3 Training
+Next we train our model. We use Fashion-MNIST images, flattened to 784-dimensional
+feature vectors.
+data = d2l.FashionMNIST(batch_size=256)
+model = SoftmaxRegression(num_outputs=10, lr=0.1)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+As before, this algorithm converges to a solution that is reasonably accurate, albeit this time
+with fewer lines of code than before.
+4.5.4 Summary
+High-level APIs are very convenient at hiding from their user potentially dangerousaspects,
+such as numerical stability. Moreover, they allow users to design models concisely with
+147
+Generalization in Classification
+99
+very few lines of code. This is both a blessing and a curse. The obvious benefit is that it
+makes things highly accessible, even to engineers who never took a single class of statistics
+in their life (in fact, they are part of the target audience of the book). But hiding the sharp
+edges also comes with a price: a disincentive to add new and different components on your
+own, since there is little muscle memory for doing it. Moreover, it makes it more difficult
+to fix things whenever the protective padding of a framework fails to cover all the corner
+cases entirely. Again, this is due to lack of familiarity.
+As such, we strongly urge you to review both the bare bones and the elegant versions of
+many of the implementations that follow. While we emphasize ease of understanding, the
+implementations are nonetheless usually quite performant (convolutions are the big excep
+tion here). It is our intention to allow you to build on these when you invent something new
+that no framework can give you.
+4.5.5 Exercises
+1. Deep learning uses many different number formats, including FP64 double precision
+(used extremely rarely), FP32 single precision, BFLOAT16 (good for compressed rep
+resentations), FP16 (very unstable), TF32 (a new format from NVIDIA), and INT8.
+Compute the smallest and largest argument of the exponential function for which the
+result does not lead to numerical underflow or overflow.
+2. INT8is a very limited format consisting of nonzero numbers from 1 to 255. How could
+you extend its dynamic range without using more bits? Do standard multiplication and
+addition still work?
+3. Increase the number of epochs for training. Why might the validation accuracy decrease
+after a while? How could we fix this?
+4. What happens as you increase the learning rate? Compare the loss curves for several
+learning rates. Which one works better? When?
+Discussions99.
+4.6 Generalization in Classification
+So far, we have focused on how to tackle multiclass classification problems by training
+(linear) neural networks with multiple outputs and softmax functions. Interpreting our
+model’s outputs as probabilistic predictions, we motivated and derived the cross-entropy
+loss function, which calculates the negative log likelihood that our model (for a fixed set
+of parameters) assigns to the actual labels. And finally, we put these tools into practice
+by fitting our model to the training set. However, as always, our goal is to learn general
+patterns, as assessed empirically on previously unseen data (the test set). High accuracy
+on the training set means nothing. Whenever each of our inputs is unique (and indeed this
+is true for most high-dimensional datasets), we can attain perfect accuracy on the training
+148
+Linear Neural Networks for Classification
+set by just memorizing the dataset on the first training epoch, and subsequently looking up
+the label whenever we see a new image. And yet, memorizing the exact labels associated
+with the exact training examples does not tell us how to classify new examples. Absent
+further guidance, we might have to fall back on random guessing whenever we encounter
+new examples.
+A number of burning questions demand immediate attention:
+1. How many test examples do we need to give a good estimate of the accuracy of our
+classifiers on the underlying population?
+2. What happens if we keep evaluating models on the same test repeatedly?
+3. Why should we expect that fitting our linear models to the training set should fare any
+better than our naive memorization scheme?
+Whereas Section 3.6 introduced the basics of overfitting and generalization in the context of
+linear regression, this chapter will go a little deeper, introducing some of the foundational
+ideas of statistical learning theory. It turns out that we often can guarantee generalization
+a priori: for many models, and for any desired upper bound on the generalization gap 𝜖,
+we can often determine some required number of samples 𝑛 such that if our training set
+contains at least 𝑛 samples, our empirical error will lie within 𝜖 of the true error, for any
+data generating distribution. Unfortunately, it also turns out that while these sorts of guar
+antees provide a profound set of intellectual building blocks, they are of limited practical
+utility to the deep learning practitioner. In short, these guarantees suggest that ensuring
+generalization of deep neural networks a priori requires an absurd number of examples
+(perhaps trillions or more), even when we find that, on the tasks we care about, deep neural
+networks typically generalize remarkably well with far fewer examples (thousands). Thus
+deep learning practitioners often forgo a priori guarantees altogether, instead employing
+methods that have generalized well on similar problems in the past, and certifying gen
+eralization post hoc through empirical evaluations. When we get to Chapter 5, we will
+revisit generalization and provide a light introduction to the vast scientific literature that
+has sprung in attempts to explain why deep neural networks generalize in practice.
+4.6.1 The Test Set
+Since we have already begun to rely on test sets as the gold standard method for assessing
+generalization error, let’s get started by discussing the properties of such error estimates.
+Let’s focus on a fixed classifier 𝑓, without worrying about how it was obtained. Moreover
+suppose that we possess a fresh dataset of examples D = (x(𝑖), 𝑦(𝑖)) 𝑛
+𝑖=1 that were not used
+to train the classifier 𝑓 . The empirical error of our classifier 𝑓 on D is simply the fraction
+of instances for which the prediction 𝑓 (x(𝑖)) disagrees with the true label 𝑦(𝑖), and is given
+by the following expression:
+𝜖D( 𝑓) = 1
+𝑛 
+�
+�
+𝑖=1 
+1( 𝑓 (x(𝑖)) ≠ 𝑦(𝑖)).
+(4.6.1)
+By contrast, thepopulationerror istheexpected fractionofexamplesintheunderlyingpop
+ulation (some distribution 𝑃(𝑋,𝑌) characterized by probability density function 𝑝(x, 𝑦))
+149
+Generalization in Classification
+for which our classifier disagrees with the true label:
+𝜖( 𝑓) = 𝐸(x,𝑦)∼𝑃1( 𝑓 (x) ≠ 𝑦) =
+1( 𝑓 (x) ≠ 𝑦)𝑝(x, 𝑦) 𝑑x𝑑𝑦.
+(4.6.2)
+While 𝜖( 𝑓) is the quantity that we actually care about, we cannot observe it directly, just
+as we cannot directly observe the average height in a large population without measuring
+every single person. We can only estimate this quantity based on samples. Because our
+test set D is statistically representative of the underlying population, we can view 𝜖D( 𝑓)
+as a statistical estimator of the population error 𝜖( 𝑓). Moreover, because our quantity of
+interest 𝜖( 𝑓 ) is an expectation (of therandomvariable1( 𝑓 (𝑋) ≠ 𝑌))andthecorresponding
+estimator 𝜖D( 𝑓) is the sample average, estimating the population error is simply the classic
+problem of mean estimation, which you may recall from Section 2.6.
+An important classical result from probability theory called the central limit theorem guar
+antees that whenever we possess 𝑛 random samples 𝑎1,...,𝑎𝑛 drawn from any distribution
+with mean 𝜇 and standard deviation 𝜎, then, as the number of samples 𝑛 approaches infin
+ity, the sample average ˆ𝜇 approximately tends towards a normal distribution centered at the
+true mean and with standard deviation 𝜎/√𝑛. Already, this tells us something important:
+as the number of examples grows large, our test error 𝜖D( 𝑓) should approach the true error
+𝜖( 𝑓) at a rate of O(1/√𝑛). Thus, to estimate our test error twice as precisely, we must
+collect four times as large a test set. To reduce our test error by a factor of one hundred, we
+must collect ten thousand times as large a test set. In general, such a rate of O(1/√𝑛) is
+often the best we can hope for in statistics.
+Now that we know something about the asymptotic rate at which our test error 𝜖D( 𝑓)
+converges to the true error 𝜖( 𝑓), we can zoom in on some important details. Recall that
+the random variable of interest 1( 𝑓 (𝑋) ≠ 𝑌) can only take values 0 and 1 and thus is
+a Bernoulli random variable, characterized by a parameter indicating the probability that
+it takes value 1. Here, 1 means that our classifier made an error, so the parameter of our
+randomvariable is actually the true error rate 𝜖( 𝑓). The variance 𝜎2 of a Bernoulli depends
+on its parameter (here, 𝜖( 𝑓)) according to the expression 𝜖( 𝑓)(1 − 𝜖( 𝑓)). While 𝜖( 𝑓) is
+initially unknown, we know that it cannot be greater than 1. A little investigation of this
+function reveals that our variance is highest when the true error rate is close to 0.5 and can
+be far lower when it is close to 0 or close to 1. This tells us that the asymptotic standard
+deviation of our estimate 𝜖D( 𝑓) of the error 𝜖( 𝑓) (over the choice of the 𝑛 test samples)
+cannot be any greater than 0.25/𝑛.
+If we ignore the fact that this rate characterizes behavior as the test set size approaches
+infinity rather than when we possess finite samples, this tells us that if we want our test
+error 𝜖D( 𝑓) to approximate the population error 𝜖( 𝑓) such that one standard deviation
+corresponds to an interval of ±0.01, then we should collect roughly 2500 samples. If we
+want to fit two standard deviations in that range and thus be 95% confident that 𝜖D( 𝑓) ∈
+𝜖( 𝑓) ± 0.01, then we will need 10,000 samples!
+This turns out to be the size of the test sets for many popular benchmarks in machine learn
+ing. You might be surprised to find out that thousands of applied deep learning papers get
+published every year making a big deal out of error rate improvements of 0.01 or less. Of
+150
+Linear Neural Networks for Classification
+course, when the error rates are much closer to 0, then an improvement of 0.01 can indeed
+be a big deal.
+One pesky feature of our analysis thus far is that it really only tells us about asymptotics,
+i.e., how the relationship between 𝜖D and 𝜖 evolves as our sample size goes to infinity.
+Fortunately, because our random variable is bounded, we can obtain valid finite sample
+bounds by applying an inequality due to Hoeffding (1963):
+𝑃(𝜖D( 𝑓) −𝜖(𝑓) ≥ 𝑡) < exp −2𝑛𝑡2 .
+(4.6.3)
+Solving for the smallest dataset size that would allow us to conclude with 95% confidence
+that the distance 𝑡 between our estimate 𝜖D( 𝑓) and the true error rate 𝜖( 𝑓) does not exceed
+0.01, you will find that roughly 15,000 examples are required as compared to the 10,000
+examples suggested by the asymptotic analysis above. If you go deeper into statistics you
+will find that this trend holds generally. Guarantees that hold even in finite samples are
+typically slightly more conservative. Note that in the scheme of things, these numbers
+are not so far apart, reflecting the general usefulness of asymptotic analysis for giving us
+ballpark figures even if they are not guarantees we can take to court.
+4.6.2 Test Set Reuse
+In some sense, you are now set up to succeed at conducting empirical machine learning
+research. Nearly all practical models are developed and validated based on test set perfor
+mance and you are now a master of the test set. For any fixed classifier 𝑓, you know how
+to evaluate its test error 𝜖D( 𝑓), and know precisely what can (and cannot) be said about its
+population error 𝜖( 𝑓).
+So let’s say that you take this knowledge and prepare to train your first model 𝑓1. Knowing
+just how confident you need to be in the performance of your classifier’serrorrateyouapply
+our analysis above to determine an appropriate number of examples to set aside for the test
+set. Moreover, let’s assume that you took the lessons from Section 3.6 to heart and made
+sure to preserve the sanctity of the test set by conducting all of your preliminary analysis,
+hyperparameter tuning, and even selection among multiple competing model architectures
+onavalidation set. Finally you evaluate your model 𝑓1 on the test set and report an unbiased
+estimate of the population error with an associated confidence interval.
+So far everything seems to be going well. However, that night you wake up at 3am with
+a brilliant idea for a new modeling approach. The next day, you code up your new model,
+tune its hyperparameters on the validation set and not only are you getting your new model
+𝑓2 to work but its error rate appears to be much lower than 𝑓1’s. However, the thrill of
+discovery suddenly fades as you prepare for the final evaluation. You do not have a test
+set!
+Eventhough theoriginal test set D isstill sitting on your server, younowfacetwoformidable
+problems. First, when you collected your test set, you determined the required level of pre
+cision under the assumption that you were evaluating a single classifier 𝑓. However, if
+you get into the business of evaluating multiple classifiers 𝑓1, ..., 𝑓𝑘 on the same test set,
+you must consider the problem of false discovery. Before, you might have been 95% sure
+151
+Generalization in Classification
+that 𝜖D( 𝑓) ∈ 𝜖( 𝑓) ± 0.01 for a single classifier 𝑓 and thus the probability of a misleading
+result was a mere 5%. With 𝑘 classifiers in the mix, it can be hard to guarantee that there
+is not even one among them whose test set performance is misleading. With 20 classifiers
+under consideration, you might have no power at all to rule out the possibility that at least
+one among them received a misleading score. This problem relates to multiple hypothesis
+testing, which despite a vast literature in statistics, remains a persistent problem plaguing
+scientific research.
+If that is not enough to worry you, there is a special reason to distrust the results that you
+get on subsequent evaluations. Recall that our analysis of test set performance rested on
+the assumption that the classifier was chosen absent any contact with the test set and thus
+we could view the test set as drawn randomly from the underlying population. Here, not
+only are you testing multiple functions, the subsequent function 𝑓2 was chosen after you
+observed the test set performance of 𝑓1. Once information from the test set has leaked
+to the modeler, it can never be a true test set again in the strictest sense. This problem is
+called adaptive overfitting and has recently emerged as a topic of intense interest to learning
+theorists and statisticians (Dwork et al., 2015). Fortunately, while it is possible to leak all
+information out of a holdout set, and the theoretical worst case scenarios are bleak, these
+analyses may be too conservative. In practice, take care to create real test sets, to consult
+them as infrequently as possible, to account for multiple hypothesis testing when reporting
+confidence intervals, and to dial up your vigilance more aggressively when the stakes are
+high and your dataset size is small. When running a series of benchmark challenges, it is
+often good practice to maintain several test sets so that after each round, the old test set can
+be demoted to a validation set.
+4.6.3 Statistical Learning Theory
+Put simply, test sets are all that we really have, and yet this fact seems strangely unsatisfy
+ing. First, we seldom possess a true test set—unless we are the ones creating the dataset,
+someone else has probably already evaluated their own classifier on our ostensible “test
+set”. And even when we have first dibs, we soon find ourselves frustrated, wishing we
+could evaluate our subsequent modeling attempts without the gnawing feeling that we can
+not trust our numbers. Moreover, even a true test set can only tell us post hoc whether a
+classifier has in fact generalized to the population, not whether we have any reason to expect
+a priori that it should generalize.
+With these misgivings in mind, you might now be sufficiently primed to see the appeal of
+statistical learning theory, the mathematical subfield of machine learning whose practi
+tioners aim to elucidate the fundamental principles that explain why/when models trained
+on empirical data can/will generalize to unseen data. One of the primary aims of statistical
+learning researchers has been to bound the generalization gap, relating the properties of the
+model class to the number of samples in the dataset.
+Learning theorists aim to bound the difference between the empirical error 𝜖S( 𝑓S) of a
+learned classifier 𝑓S, both trained and evaluated on the training set S, and the true error
+𝜖( 𝑓S) of that same classifier on the underlying population. This might look similar to
+the evaluation problem that we just addressed but there is a major difference. Earlier, the
+152
+Linear Neural Networks for Classification
+classifier 𝑓 was fixed and we only needed a dataset for evaluative purposes. And indeed,
+any fixed classifier does generalize: its error on a (previously unseen) dataset is an unbiased
+estimate of the population error. But what can we say when a classifier is trained and
+evaluated on the same dataset? Can we ever be confident that the training error will be
+close to the testing error?
+Suppose that our learned classifier 𝑓S must be chosen from some pre-specified set of func
+tions F. Recall from our discussion of test sets that while it is easy to estimate the error of a
+single classifier, things get hairy when we begin to consider collections of classifiers. Even
+if the empirical error of any one (fixed) classifier will be close to its true error with high
+probability, once we consider a collection of classifiers, we need to worry about the possi
+bility that just one of them will receive a badly estimated error. The worry is that we might
+pick such a classifier and thereby grossly underestimate the population error. Moreover,
+even for linear models, because their parameters are continuously valued, we are typically
+choosing from an infinite class of functions (|F | = ∞).
+One ambitious solution to the problem is to develop analytic tools for proving uniform
+convergence, i.e., that with high probability, the empirical error rate for every classifier
+in the class 𝑓 ∈ F will simultaneously converge to its true error rate. In other words,
+we seek a theoretical principle that would allow us to state that with probability at least
+1 − 𝛿 (for some small 𝛿) no classifier’s error rate 𝜖( 𝑓) (among all classifiers in the class
+F) will be misestimated by more than some small amount 𝛼. Clearly, we cannot make
+such statements for all model classes F. Recall the class of memorization machines that
+always achieve empirical error 0 but never outperform random guessing on the underlying
+population.
+In a sense the class of memorizers is too flexible. No such a uniform convergence result
+could possibly hold. Ontheotherhand, afixedclassifierisuseless—itgeneralizesperfectly,
+but fits neither the training data nor the test data. The central question of learning has
+thus historically been framed as a trade-off between more flexible (higher variance) model
+classes that better fit the training data but risk overfitting, versus more rigid (higher bias)
+model classes that generalize well but risk underfitting. A central question in learning
+theory has been to develop the appropriate mathematical analysis to quantify where a model
+sits along this spectrum, and to provide the associated guarantees.
+In a series of seminal papers, Vapnik and Chervonenkis extended the theory on the con
+vergence of relative frequencies to more general classes of functions (Vapnik and Cher
+vonenkis, 1964, Vapnik and Chervonenkis, 1968, Vapnik and Chervonenkis, 1971, Vap
+nik and Chervonenkis, 1981, Vapnik and Chervonenkis, 1991, Vapnik and Chervonenkis,
+1974). One of the key contributions of this line of work is the Vapnik–Chervonenkis (VC)
+dimension, which measures (one notion of) the complexity (flexibility) of a model class.
+Moreover, one of their key results bounds the difference between the empirical error and
+the population error as a function of the VC dimension and the number of samples:
+𝑃 𝑅[𝑝, 𝑓] − 𝑅emp[X,Y, 𝑓] < 𝛼 ≥ 1−𝛿 for 𝛼 ≥ 𝑐
+(VC−log𝛿)/𝑛.
+(4.6.4)
+Here 𝛿 > 0 is the probability that the bound is violated, 𝛼 is the upper bound on the
+generalization gap, and 𝑛 is the dataset size. Lastly, 𝑐 > 0 is a constant that depends only
+153
+Generalization in Classification
+on the scale of the loss that can be incurred. One use of the bound might be to plug in
+desired values of 𝛿 and 𝛼 to determine how many samples to collect. The VC dimension
+quantifies the largest number of data points for which we can assign any arbitrary (binary)
+labeling and for each find some model 𝑓 in the class that agrees with that labeling. For
+example, linear models on 𝑑-dimensional inputs have VC dimension 𝑑 + 1. It is easy to
+see that a line can assign any possible labeling to three points in two dimensions, but not
+to four. Unfortunately, the theory tends to be overly pessimistic for more complex models
+and obtaining this guarantee typically requires far more examples than are actually needed
+to achieve the desired error rate. Note also that fixing the model class and 𝛿, our error rate
+again decays with the usual O(1/√𝑛) rate. It seems unlikely that we could do better in
+terms of 𝑛. However, as we vary the model class, VC dimension can present a pessimistic
+picture of the generalization gap.
+4.6.4 Summary
+The most straightforward way to evaluate a model is to consult a test set comprised of pre
+viously unseen data. Test set evaluations provide an unbiased estimate of the true error
+and converge at the desired O(1/√𝑛) rate as the test set grows. We can provide approx
+imate confidence intervals based on exact asymptotic distributions or valid finite sample
+confidence intervals based on (more conservative) finite sample guarantees. Indeed test
+set evaluation is the bedrock of modern machine learning research. However, test sets are
+seldom true test sets (used by multiple researchers again and again). Once the same test set
+is used to evaluate multiple models, controlling for false discovery can be difficult. This
+can cause huge problems in theory. In practice, the significance of the problem depends on
+the size of the holdout sets in question and whether they are merely being used to choose
+hyperparameters or if they are leaking information more directly. Nevertheless, it is good
+practice to curate real test sets (or multiple) and to be as conservative as possible about how
+often they are used.
+Hoping to provide a more satisfying solution, statistical learning theorists have developed
+methods for guaranteeing uniform convergence over a model class. If indeed every model’s
+empirical error simultaneously converges to its true error, then we are free to choose the
+model that performs best, minimizing the training error, knowing that it too will perform
+similarly well on the holdout data. Crucially, any one of such results must depend on some
+property of the model class. Vladimir Vapnik and Alexey Chernovenkis introduced the VC
+dimension, presenting uniform convergence results that hold for all models in a VC class.
+The training errors for all models in the class are (simultaneously) guaranteed to be close
+to their true errors, and guaranteed to grow even closer at O(1/√𝑛) rates. Following the
+revolutionary discovery of VC dimension, numerous alternative complexity measures have
+been proposed, each facilitating an analogous generalization guarantee. See Boucheron
+et al. (2005) for a detailed discussion of several advanced ways of measuring function
+complexity. Unfortunately, while these complexity measures have become broadly useful
+tools in statistical theory, they turn out to be powerless (as straightforwardly applied) for
+explaining why deep neural networks generalize. Deep neural networks often have millions
+of parameters (or more), and can easily assign random labels to large collections of points.
+Nevertheless, they generalize well on practical problems and, surprisingly, they often gen
+154
+Linear Neural Networks for Classification
+100
+eralize better, when they are larger and deeper, despite incurring higher VC dimensions. In
+the next chapter, we will revisit generalization in the context of deep learning.
+4.6.5 Exercises
+1. If we wish to estimate the error of a fixed model 𝑓 to within 0.0001 with probability
+greater than 99.9%, how many samples do we need?
+2. Suppose that somebody else possesses a labeled test set D and only makes available the
+unlabeled inputs (features). Now suppose that you can only access the test set labels by
+running a model 𝑓 (with no restrictions placed on the model class) on each of the un
+labeled inputs and receiving the corresponding error 𝜖D( 𝑓). How many models would
+you need to evaluate before you leak the entire test set and thus could appear to have
+error 0, regardless of your true error?
+3. What is the VC dimension of the class of fifth-order polynomials?
+4. What is the VC dimension of axis-aligned rectangles on two-dimensional data?
+Discussions100.
+4.7 Environment and Distribution Shift
+In the previous sections, we worked through a number of hands-on applications of machine
+learning, fitting models to a variety of datasets. And yet, we never stopped to contemplate
+either where data came from in the first place or what we ultimately plan to do with the
+outputs from our models. Too often, machine learning developers in possession of data
+rush to develop models without pausing to consider these fundamental issues.
+Many failed machine learning deployments can be traced back to this failure. Sometimes
+models appear to perform marvelously as measured by test set accuracy but fail catastroph
+ically in deployment when the distribution of data suddenly shifts. More insidiously, some
+times the very deployment of a model can be the catalyst that perturbs the data distribution.
+Say, for example, that we trained a model to predict who will repay rather than default on a
+loan, finding that an applicant’s choice of footwear was associated with the risk of default
+(Oxfords indicate repayment, sneakers indicate default). We might be inclined thereafter
+to grant a loan to any applicant wearing Oxfords and to deny all applicants wearing sneak
+ers.
+In this case, our ill-considered leap from pattern recognition to decision-making and our
+failure to critically consider the environment might have disastrous consequences. For
+starters, as soon as we began making decisions based on footwear, customers would catch
+on and change their behavior. Before long, all applicants would be wearing Oxfords, with
+out any coincident improvement in credit-worthiness. Take a minute to digest this because
+155
+Environment and Distribution Shift
+similar issues abound in many applications of machine learning: by introducing our model
+based decisions to the environment, we might break the model.
+Whilewecannot possibly give these topics a complete treatment in onesection, weaimhere
+to expose some common concerns, and to stimulate the critical thinking required to detect
+such situations early, mitigate damage, and use machine learning responsibly. Some of the
+solutions are simple (ask for the “right” data), some are technically difficult (implement a
+reinforcement learning system), and others require that we step outside the realm of sta
+tistical prediction altogether and grapple with difficult philosophical questions concerning
+the ethical application of algorithms.
+4.7.1 Types of Distribution Shift
+Tobegin, westick with the passive prediction setting considering the various ways that data
+distributions might shift and what might be done to salvage model performance. Inoneclas
+sic setup, we assume that our training data was sampled from some distribution 𝑝𝑆(x, 𝑦)
+but that our test data will consist of unlabeled examples drawn from some different distri
+bution 𝑝𝑇(x, 𝑦). Already, we must confront a sobering reality. Absent any assumptions on
+how 𝑝𝑆 and 𝑝𝑇 relate to each other, learning a robust classifier is impossible.
+Consider a binary classification problem, where we wish to distinguish between dogs and
+cats. If the distribution can shift in arbitrary ways, then our setup permits the pathological
+case in which the distribution over inputs remains constant: 𝑝𝑆(x) = 𝑝𝑇(x), but the labels
+are all flipped: 𝑝𝑆(𝑦 | x) = 1− 𝑝𝑇(𝑦 | x). In other words, if God can suddenly decide that
+in the future all “cats” are now dogs and what we previously called “dogs” are now cats—
+without any change in the distribution of inputs 𝑝(x), then we cannot possibly distinguish
+this setting from one in which the distribution did not change at all.
+Fortunately, under some restricted assumptions on the waysourdatamightchangeinthefu
+ture, principled algorithms can detect shift and sometimes even adapt on the fly, improving
+on the accuracy of the original classifier.
+Covariate Shift
+Among categories of distribution shift, covariate shift may be the most widely studied.
+Here, we assume that while the distribution of inputs may change over time, the labeling
+function, i.e., the conditional distribution 𝑃(𝑦 | x) does not change. Statisticians call this
+covariate shift because the problem arises due to a shift in the distribution of the covari
+ates (features). While we can sometimes reason about distribution shift without invoking
+causality, we note that covariate shift is the natural assumption to invoke in settings where
+we believe that x causes 𝑦.
+Consider the challenge of distinguishing cats and dogs. Our training data might consist of
+images of the kind in Fig. 4.7.1.
+At test time we are asked to classify the images in Fig. 4.7.2.
+The training set consists of photos, while the test set contains only cartoons. Training on a
+156
+Linear Neural Networks for Classification
+Fig. 4.7.1
+Fig. 4.7.2
+Training data for distinguishing cats and dogs (illustrations: Lafeez Hossain / 500px /
+Getty Images; ilkermetinkursova / iStock / Getty Images Plus; GlobalP / iStock / Getty
+Images Plus; Musthafa Aboobakuru / 500px / Getty Images).
+Test data for distinguishing cats and dogs (illustrations: SIBAS_minich / iStock / Getty
+Images Plus; Ghrzuzudu / iStock / Getty Images Plus; id-work / DigitalVision Vectors /
+Getty Images; Yime / iStock / Getty Images Plus).
+dataset with substantially different characteristics from the test set can spell trouble absent
+a coherent plan for how to adapt to the new domain.
+Label Shift
+Label shift describes the converse problem. Here, we assume that the label marginal 𝑃(𝑦)
+can change but the class-conditional distribution 𝑃(x | 𝑦) remains fixed across domains.
+Label shift is a reasonable assumption to make when we believe that 𝑦 causes x. For ex
+ample, we may want to predict diagnoses given their symptoms (or other manifestations),
+even as the relative prevalence of diagnoses are changing over time. Label shift is the ap
+propriate assumption here because diseases cause symptoms. In some degenerate cases the
+label shift and covariate shift assumptions can hold simultaneously. For example, when the
+label is deterministic, the covariate shift assumption will be satisfied, even when 𝑦 causes
+x. Interestingly, in these cases, it is often advantageous to work with methods that flow
+from the label shift assumption. That is because these methods tend to involve manipulat
+ing objects that look like labels (often low-dimensional), as opposed to objects that look
+like inputs, which tend to be high-dimensional in deep learning.
+157
+Environment and Distribution Shift
+Fig. 4.7.3
+Concept Shift
+We may also encounter the related problem of concept shift, which arises when the very
+definitions of labels can change. This sounds weird—a cat is a cat, no? However, other
+categories are subject to changes in usage over time. Diagnostic criteria for mental illness,
+what passes for fashionable, and job titles, are all subject to considerable amounts of con
+cept shift. It turns out that if we navigate around the United States, shifting the source of
+our data by geography, we will find considerable concept shift regarding the distribution of
+names for soft drinks as shown in Fig. 4.7.3.
+Concept shift for soft drink names in the United States (CC-BY: Alan McConchie,
+PopVsSoda.com).
+If we were to build a machine translation system, the distribution 𝑃(𝑦 | x) might be dif
+ferent depending on our location. This problem can be tricky to spot. We might hope to
+exploit knowledge that shift only takes place gradually either in a temporal or geographic
+sense.
+4.7.2 Examples of Distribution Shift
+Before delving into formalism and algorithms, we can discuss some concrete situations
+where covariate or concept shift might not be obvious.
+Medical Diagnostics
+Imagine that you want to design an algorithm to detect cancer. Youcollectdatafromhealthy
+and sick people and you train your algorithm. It works fine, giving you high accuracy and
+you conclude that you are ready for a successful career in medical diagnostics. Not so
+fast.
+The distributions that gave rise to the training data and those you will encounter in the wild
+158
+Linear Neural Networks for Classification
+might differ considerably. This happened to an unfortunate startup that some of we authors
+worked with years ago. They were developing a blood test for a disease that predominantly
+affects older men and hoped to study it using blood samples that they had collected from
+patients. However, it is considerably more difficult to obtain blood samples from healthy
+men than from sick patients already in the system. To compensate, the startup solicited
+blood donations from students on a university campus to serve as healthy controls in de
+veloping their test. Then they asked whether we could help them to build a classifier for
+detecting the disease.
+As we explained to them, it would indeed be easy to distinguish between the healthy and
+sick cohorts with near-perfect accuracy. However, that is because the test subjects differed
+in age, hormone levels, physical activity, diet, alcohol consumption, and many more fac
+tors unrelated to the disease. This was unlikely to be the case with real patients. Due to
+their sampling procedure, we could expect to encounter extreme covariate shift. Moreover,
+this case was unlikely to be correctable via conventional methods. In short, they wasted a
+significant sum of money.
+Self-Driving Cars
+Say a company wanted to leverage machine learning for developing self-driving cars. One
+key component here is a roadside detector. Since real annotated data is expensive to get,
+they had the (smart and questionable) idea to use synthetic data from a game rendering
+engine as additional training data. This worked really well on “test data” drawn from the
+rendering engine. Alas, inside a real car it was a disaster. As it turned out, the roadside had
+been rendered with a very simplistic texture. More importantly, all the roadside had been
+rendered with the same texture and the roadside detector learned about this “feature” very
+quickly.
+A similar thing happened to the US Army when they first tried to detect tanks in the forest.
+They took aerial photographs of the forest without tanks, then drove the tanks into the forest
+and took another set of pictures. The classifier appeared to work perfectly. Unfortunately, it
+had merely learned how to distinguish trees with shadows from trees without shadows—the
+first set of pictures was taken in the early morning, the second set at noon.
+Nonstationary Distributions
+A much more subtle situation arises when the distribution changes slowly (also known
+as nonstationary distribution) and the model is not updated adequately. Below are some
+typical cases.
+• Wetrainacomputational advertising model and then fail to update it frequently (e.g., we
+forget to incorporate that an obscure new device called an iPad was just launched).
+• Webuild a spam filter. It works well at detecting all spam that we have seen so far. But
+then the spammers wise up and craft new messages that look unlike anything we have
+seen before.
+159
+Environment and Distribution Shift
+• We build a product recommendation system. It works throughout the winter but then
+continues to recommend Santa hats long after Christmas.
+More Anecdotes
+• Webuild a face detector. It works well on all benchmarks. Unfortunately it fails on test
+data—the offending examples are close-ups where the face fills the entire image (no
+such data was in the training set).
+• Webuild a web search engine for the US market and want to deploy it in the UK.
+• Wetrain an image classifier by compiling a large dataset where each among a large set
+of classes is equally represented in the dataset, say 1000 categories, represented by
+1000 images each. Then we deploy the system in the real world, where the actual
+label distribution of photographs is decidedly non-uniform.
+4.7.3 Correction of Distribution Shift
+As we have discussed, there are many cases where training and test distributions 𝑃(x, 𝑦)
+are different. In some cases, we get lucky and the models work despite covariate, label,
+or concept shift. In other cases, we can do better by employing principled strategies to
+cope with the shift. The remainder of this section grows considerably more technical. The
+impatient reader could continue on to the next section as this material is not prerequisite to
+subsequent concepts.
+Empirical Risk and Risk
+Let’s first reflect on what exactly is happening during model training: we iterate over fea
+tures and associated labels of training data {(x1, 𝑦1), . . . , (x𝑛, 𝑦𝑛)} and update the param
+eters of a model 𝑓 after every minibatch. For simplicity we do not consider regularization,
+so we largely minimize the loss on the training:
+𝑛
+minimize
+𝑓
+1
+𝑛
+𝑖=1
+𝑙( 𝑓 (x𝑖), 𝑦𝑖),
+(4.7.1)
+where 𝑙 is the loss function measuring “how bad” the prediction 𝑓 (x𝑖) is given the associ
+ated label 𝑦𝑖. Statisticians call the term in (4.7.1) empirical risk. The empirical risk is an
+average loss over the training data for approximating the risk, which is the expectation of
+the loss over the entire population of data drawn from their true distribution 𝑝(x, 𝑦):
+𝐸𝑝(x,𝑦)[𝑙( 𝑓 (x), 𝑦)] =
+𝑙( 𝑓 (x), 𝑦)𝑝(x, 𝑦) 𝑑x𝑑𝑦.
+(4.7.2)
+However, in practice we typically cannot obtain the entire population of data. Thus, em
+pirical risk minimization, which is minimizing the empirical risk in (4.7.1), is a practical
+strategy for machine learning, with the hope of approximately minimizing the risk.
+160
+Linear Neural Networks for Classification
+Covariate Shift Correction
+Assume that wewant to estimate some dependency 𝑃(𝑦 | x) forwhichwehavelabeleddata
+(x𝑖, 𝑦𝑖). Unfortunately, the observations x𝑖 are drawn from some source distribution 𝑞(x)
+rather than the target distribution 𝑝(x). Fortunately, the dependency assumption means
+that the conditional distribution does not change: 𝑝(𝑦 | x) = 𝑞(𝑦 | x). If the source
+distribution 𝑞(x) is “wrong”, we can correct for that by using the following simple identity
+in the risk:
+𝑙( 𝑓 (x), 𝑦)𝑝(𝑦 | x)𝑝(x) 𝑑x𝑑𝑦 =
+𝑙( 𝑓 (x), 𝑦)𝑞(𝑦 | x)𝑞(x) 𝑝(x)
+𝑞(x) 𝑑x𝑑𝑦.
+(4.7.3)
+In other words, we need to reweigh each data example by the ratio of the probability that it
+would have been drawn from the correct distribution to that from the wrong one:
+𝛽𝑖 
+def
+= 𝑝(x𝑖)
+𝑞(x𝑖) .
+(4.7.4)
+Plugging in the weight 𝛽𝑖 for each data example (x𝑖, 𝑦𝑖) we can train our model using
+weighted empirical risk minimization:
+𝑛
+minimize
+𝑓
+1
+𝑛
+𝑖=1
+𝛽𝑖𝑙( 𝑓 (x𝑖), 𝑦𝑖).
+(4.7.5)
+Alas, we do not know that ratio, so before we can do anything useful we need to estimate
+it. Many methods are available, including some fancy operator-theoretic approaches that
+attempt to recalibrate the expectation operator directly using a minimum-norm or a maxi
+mum entropy principle. Note that for any such approach, we need samples drawnfromboth
+distributions—the “true” 𝑝, e.g., by access to test data, and the one used for generating the
+training set 𝑞 (the latter is trivially available). Note however, that we only need features
+x ∼ 𝑝(x); we do not need to access labels 𝑦 ∼ 𝑝(𝑦).
+In this case, there exists a very effective approach that will give almost as good results
+as the original: namely, logistic regression, which is a special case of softmax regression
+(see Section 4.1) for binary classification. This is all that is needed to compute estimated
+probability ratios. We learn a classifier to distinguish between data drawn from 𝑝(x) and
+data drawn from 𝑞(x). If it is impossible to distinguish between the two distributions then
+it means that the associated instances are equally likely to come from either one of those
+two distributions. On the other hand, any instances that can be well discriminated should
+be significantly overweighted or underweighted accordingly.
+For simplicity’s sake assume that we have an equal number of instances from both distribu
+tions 𝑝(x) and 𝑞(x), respectively. Now denote by 𝑧 labels that are 1 for data drawn from 𝑝
+and −1 for data drawn from 𝑞. Then the probability in a mixed dataset is given by
+𝑃(𝑧 = 1 | x) =
+𝑝(x)
+𝑝(x) + 𝑞(x) and hence 𝑃(𝑧 = 1 | x)
+𝑃(𝑧 = −1 | x) = 𝑝(x)
+𝑞(x) .
+Thus, if we use a logistic regression approach, where 𝑃(𝑧 = 1 | x) = 1
+(4.7.6)
+1+exp(−ℎ(x)) (ℎ is a
+161
+Environment and Distribution Shift
+𝛽𝑖 =
+parametrized function), it follows that
+1/(1 + exp(−ℎ(x𝑖)))
+exp(−ℎ(x𝑖))/(1 + exp(−ℎ(x𝑖))) = exp(ℎ(x𝑖)).
+(4.7.7)
+As a result, we need to solve two problems: the first, to distinguish between data drawn
+fromboth distributions, andthenaweightedempiricalriskminimizationproblemin(4.7.5)
+where we weigh terms by 𝛽𝑖.
+Now we are ready to describe a correction algorithm. Suppose that we have a training set
+{(x1, 𝑦1), . . . , (x𝑛, 𝑦𝑛)} and an unlabeled test set {u1, . . .,u𝑚}. For covariate shift, we
+assume that x𝑖 for all 1 ≤ 𝑖 ≤ 𝑛 are drawn from some source distribution and u𝑖 for all
+1 ≤ 𝑖 ≤ 𝑚 are drawn from the target distribution. Here is a prototypical algorithm for
+correcting covariate shift:
+1. Createabinary-classificationtrainingset: {(x1, −1), . . . , (x𝑛, −1), (u1,1), . . . , (u𝑚,1)}.
+2. Train a binary classifier using logistic regression to get the function ℎ.
+3. Weigh training data using 𝛽𝑖 = exp(ℎ(x𝑖)) or better 𝛽𝑖 = min(exp(ℎ(x𝑖)),𝑐) for some
+constant 𝑐.
+4. Use weights 𝛽𝑖 for training on {(x1, 𝑦1),. . ., (x𝑛, 𝑦𝑛)} in (4.7.5).
+Note that the above algorithm relies on a crucial assumption. For this scheme to work, we
+need that each data example in the target (e.g., test time) distribution had nonzero proba
+bility of occurring at training time. If we find a point where 𝑝(x) > 0 but 𝑞(x) = 0, then
+the corresponding importance weight should be infinity.
+Label Shift Correction
+Assume that we are dealing with a classification task with 𝑘 categories. Using the same
+notation in Section 4.7.3, 𝑞 and 𝑝 are the source distribution (e.g., training time) and target
+distribution (e.g., test time), respectively. Assume that the distribution of labels shifts over
+time: 𝑞(𝑦) ≠ 𝑝(𝑦), but the class-conditional distribution stays the same: 𝑞(x | 𝑦) = 𝑝(x |
+𝑦). If the source distribution 𝑞(𝑦) is “wrong”, we can correct for that according to the
+following identity in the risk as defined in (4.7.2):
+𝑙( 𝑓 (x), 𝑦)𝑝(x | 𝑦)𝑝(𝑦) 𝑑x𝑑𝑦 =
+𝑙( 𝑓 (x), 𝑦)𝑞(x | 𝑦)𝑞(𝑦) 𝑝(𝑦)
+𝑞(𝑦) 𝑑x𝑑𝑦.
+(4.7.8)
+Here, our importance weights will correspond to the label likelihood ratios:
+𝛽𝑖 
+def
+= 𝑝(𝑦𝑖)
+𝑞(𝑦𝑖) .
+(4.7.9)
+One nice thing about label shift is that if we have a reasonably good model on the source
+distribution, then we can get consistent estimates of these weights without ever having to
+deal with the ambient dimension. In deep learning, the inputs tend to be high-dimensional
+objects like images, while the labels are often simpler objects like categories.
+To estimate the target label distribution, we first take our reasonably good off-the-shelf
+162
+Linear Neural Networks for Classification
+classifier (typically trained on the training data) and compute its “confusion” matrix using
+the validation set (also from the training distribution). The confusion matrix, C, is simply a
+𝑘 ×𝑘 matrix, where each column corresponds to the label category (ground truth) and each
+row corresponds to our model’s predicted category. Each cell’s value 𝑐𝑖𝑗 is the fraction of
+total predictions on the validation set where the true label was 𝑗 and our model predicted
+𝑖.
+Now, we cannot calculate the confusion matrix on the target data directly because we do
+not get to see the labels for the examples that we see in the wild, unless we invest in a
+complex real-time annotation pipeline. What we can do, however, is average all of our
+model’s predictions at test time together, yielding the mean model outputs 𝜇(ˆy) ∈ R𝑘,
+where the 𝑖th element 𝜇(ˆ𝑦𝑖) is the fraction of the total predictions on the test set where our
+model predicted 𝑖.
+It turns out that under some mild conditions—if our classifier was reasonably accurate in
+the first place, and if the target data contains only categories that we have seen before, and
+if the label shift assumption holds in the first place (the strongest assumption here)—we
+can estimate the test set label distribution by solving a simple linear system
+C𝑝(y) = 𝜇(ˆy),
+(4.7.10)
+because as an estimate 𝑘
+𝑗=1 𝑐𝑖𝑗𝑝(𝑦𝑗) = 𝜇(ˆ𝑦𝑖) holds for all 1 ≤ 𝑖 ≤ 𝑘, where 𝑝(𝑦𝑗) is
+the 𝑗th element of the 𝑘-dimensional label distribution vector 𝑝(y). If our classifier is
+sufficiently accurate to begin with, then the confusion matrix C will be invertible, and we
+get a solution 𝑝(y) = C−1𝜇(ˆy).
+Because we observe the labels on the source data, it is easy to estimate the distribution
+𝑞(𝑦). Then, for any training example 𝑖 with label 𝑦𝑖, we can take the ratio of our esti
+mated 𝑝(𝑦𝑖)/𝑞(𝑦𝑖) to calculate the weight 𝛽𝑖, and plug this into weighted empirical risk
+minimization in (4.7.5).
+Concept Shift Correction
+Concept shift is much harder to fix in a principled manner. Forinstance, inasituationwhere
+suddenly the problem changes from distinguishing cats from dogs to one of distinguishing
+white from black animals, it will be unreasonable to assume that we can do much better
+than just collecting new labels and training from scratch. Fortunately, in practice, such
+extreme shifts are rare. Instead, what usually happens is that the task keeps on changing
+slowly. To make things more concrete, here are some examples:
+• Incomputational advertising, new products are launched, old products become less pop
+ular. This means that the distribution over ads and their popularity changes gradually
+and any click-through rate predictor needs to change gradually with it.
+• Traffic camera lenses degrade gradually due to environmental wear, affecting image
+quality progressively.
+• Newscontent changes gradually (i.e., most of the news remains unchanged but new sto
+ries appear).
+163
+Environment and Distribution Shift
+In such cases, we can use the same approach that we used for training networks to make
+them adapt to the change in the data. In other words, we use the existing network weights
+andsimplyperformafewupdatestepswith thenewdata ratherthan trainingfrom scratch.
+4.7.4 A Taxonomy of Learning Problems
+Armed with knowledge about how to deal with changes in distributions, we can now con
+sider some other aspects of machine learning problem formulation.
+Batch Learning
+In batch learning, we have access to training features and labels {(x1, 𝑦1), . . ., (x𝑛, 𝑦𝑛)},
+whichwe use to train a model 𝑓 (x). Lateron, wedeploythismodeltoscorenewdata (x, 𝑦)
+drawn from the same distribution. This is the default assumption for any of the problems
+that we discuss here. For instance, we might train a cat detector based on lots of pictures
+of cats and dogs. Once we have trained it, we ship it as part of a smart catdoor computer
+vision system that lets only cats in. This is then installed in a customer’s home and is never
+updated again (barring extreme circumstances).
+Online Learning
+Now imagine that the data (x𝑖, 𝑦𝑖) arrives one sample at a time. More specifically, assume
+that we first observe x𝑖, then we need to come up with an estimate 𝑓 (x𝑖). Only once
+we have done this do we observe 𝑦𝑖 and so receive a reward or incur a loss, given our
+decision. Many real problems fall into this category. For example, we need to predict
+tomorrow’s stock price, which allows us to trade based on that estimate and at the end
+of the day we find out whether our estimate made us a profit. In other words, in online
+learning, we have the following cycle where we are continuously improving our model
+given new observations:
+model 𝑓𝑡 −→ data x𝑡 −→ estimate 𝑓𝑡(x𝑡) −→
+observation 𝑦𝑡 −→ loss 𝑙(𝑦𝑡, 𝑓𝑡(x𝑡)) −→ model 𝑓𝑡+1
+Bandits
+(4.7.11)
+Bandits are a special case of the problem above. While in most learning problems we have
+a continuously parametrized function 𝑓 where we want to learn its parameters (e.g., a deep
+network), in a bandit problem we only have a finite number of arms that we can pull, i.e.,
+a finite number of actions that we can take. It is not very surprising that for this simpler
+problem stronger theoretical guarantees in terms of optimality can be obtained. We list
+it mainly since this problem is often (confusingly) treated as if it were a distinct learning
+setting.
+164
+Linear Neural Networks for Classification
+Control
+In many cases the environment remembers what we did. Not necessarily in an adversarial
+manner but it will just remember and the response will depend on what happened before.
+For instance, a coffee boiler controller will observe different temperatures depending on
+whether it was heating the boiler previously. PID (proportional-integral-derivative) con
+troller algorithms are a popular choice there. Likewise, a user’s behavior on a news site
+will depend on what we showed them previously (e.g., they will read most news only once).
+Many such algorithms form a model of the environment in which they act so as to make
+their decisions appear less random. Recently, control theory (e.g., PID variants) has also
+been used to automatically tune hyperparameters to achieve better disentangling and recon
+struction quality, and improve the diversity of generated text and the reconstruction quality
+of generated images (Shao et al., 2020).
+Reinforcement Learning
+In the more general case of an environment with memory, we may encounter situations
+where the environment is trying to cooperate with us (cooperative games, in particular
+for non-zero-sum games), or others where the environment will try to win. Chess, Go,
+Backgammon, or StarCraft are some of the cases in reinforcement learning. Likewise, we
+might want to build a good controller for autonomous cars. Other cars are likely to respond
+to the autonomous car’s driving style in nontrivial ways, e.g., trying to avoid it, trying to
+cause an accident, or trying to cooperate with it.
+Considering the Environment
+One key distinction between the different situations above is that a strategy that might have
+worked throughout in the case of a stationary environment, might not work throughout in
+an environment that canadapt. Forinstance, an arbitrage opportunity discovered by a trader
+is likely to disappear once it is exploited. The speed and manner at which the environment
+changes determines to a large extent the type of algorithms that we can bring to bear. For
+instance, if we know that things may only change slowly, we can force any estimate to
+change only slowly, too. If we know that the environment might change instantaneously,
+but only very infrequently, we can make allowances for that. These types of knowledge are
+crucial for the aspiring data scientist in dealing with concept shift, i.e., when the problem
+that is being solved can change over time.
+4.7.5 Fairness, Accountability, and Transparency in Machine
+Learning
+Finally, it is important to remember that when you deploy machine learning systems you
+are not merely optimizing a predictive model—you are typically providing a tool that will
+be used to (partially or fully) automate decisions. These technical systems can impact the
+lives of individuals who are subject to the resulting decisions. The leap from considering
+predictions to making decisions raises not only new technical questions, but also a slew of
+165
+Environment and Distribution Shift
+ethical questions that must be carefully considered. If we are deploying a medical diagnos
+tic system, we need to know for which populations it may work and for which it may not.
+Overlooking foreseeable risks to the welfare of a subpopulation could cause us to adminis
+ter inferior care. Moreover, once we contemplate decision-making systems, we must step
+back and reconsider how we evaluate our technology. Among other consequences of this
+change of scope, wewill findthataccuracyis seldomthe right measure. Forinstance, when
+translating predictions into actions, we will often want to take into account the potential cost
+sensitivity of erring in various ways. If one way of misclassifying an image could be per
+ceived as a racial sleight of hand, while misclassification to a different category would be
+harmless, then we might want to adjust our thresholds accordingly, accounting for societal
+values in designing the decision-making protocol. We also want to be careful about how
+prediction systems can lead to feedback loops. For example, consider predictive policing
+systems, which allocate patrol officers to areas with high forecasted crime. It is easy to see
+how a worrying pattern can emerge:
+1. Neighborhoods with more crime get more patrols.
+2. Consequently, more crimes are discovered in these neighborhoods, entering the training
+data available for future iterations.
+3. Exposed to more positives, the model predicts yet more crime in these neighborhoods.
+4. In the next iteration, the updated model targets the same neighborhood even more heav
+ily leading to yet more crimes discovered, etc.
+Often, the various mechanisms by which a model’s predictions become coupled to its train
+ing data are unaccounted for in the modeling process. This can lead to what researchers
+call runaway feedback loops. Additionally, we want to be careful about whether we are
+addressing the right problem in the first place. Predictive algorithms now play an outsize
+role in mediating the dissemination of information. Should the news that an individual en
+counters be determined by the set of Facebook pages they have Liked? These are just a few
+among the many pressing ethical dilemmas that you might encounter in a career in machine
+learning.
+4.7.6 Summary
+In many cases training and test sets do not come from the same distribution. This is called
+distribution shift. The risk is the expectation of the loss over the entire population of data
+drawn from their true distribution. However, this entire population is usually unavailable.
+Empirical risk is an average loss over the training data to approximate the risk. In practice,
+we perform empirical risk minimization.
+Under the corresponding assumptions, covariate and label shift can be detected and cor
+rected for at test time. Failure to account for this bias can become problematic at test time.
+In somecases, theenvironmentmayrememberautomatedactionsandrespondinsurprising
+ways. We must account for this possibility when building models and continue to moni
+tor live systems, open to the possibility that our models and the environment will become
+entangled in unanticipated ways.
+166
+Linear Neural Networks for Classification
+101
+4.7.7 Exercises
+1. What could happen when we change the behavior of a search engine? What might the
+users do? What about the advertisers?
+2. Implement a covariate shift detector. Hint: build a classifier.
+3. Implement a covariate shift corrector.
+4. Besides distribution shift, what else could affect how the empirical risk approximates
+the risk?
+Discussions101

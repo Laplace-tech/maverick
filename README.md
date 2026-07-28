@@ -8,7 +8,7 @@
 
 <br />
 
-<img src="https://img.shields.io/badge/Current%20Course-Chapter%204.3-126E82?style=for-the-badge" alt="Current course Chapter 4.3" />
+<img src="https://img.shields.io/badge/Next%20Course-Chapter%206-126E82?style=for-the-badge" alt="Next course Chapter 6" />
 <img src="https://img.shields.io/badge/Target-Full%20D2L-B565A7?style=for-the-badge" alt="Target Full D2L" />
 <img src="https://img.shields.io/badge/Framework-PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch" />
 
@@ -24,7 +24,7 @@
 |---|---|
 | Textbook | [Dive into Deep Learning](https://d2l.ai/), PyTorch edition |
 | Study Range | 전체 본문 Chapter 1–21 및 Appendices |
-| Current Position | Chapter 4.3 · The Base Classification Model |
+| Current Position | Chapter 5 완료 · Chapter 6 다음 |
 | Goal | D2L 전체 완주 및 주요 모델을 직접 구현하고 설명할 수 있는 수준 |
 | Study Period | 2026.07.23 – 2026.09.07 |
 | Environment | Windows 11 · WSL2 Ubuntu · VS Code |
@@ -37,8 +37,8 @@
 <div align="center">
 
 <img src="https://img.shields.io/badge/Python-3.12.3-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12.3" />
-<img src="https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch 2.11.0" />
-<img src="https://img.shields.io/badge/CUDA-12.8-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="CUDA 12.8" />
+<img src="https://img.shields.io/badge/PyTorch-2.13.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch 2.13.0" />
+<img src="https://img.shields.io/badge/CUDA-13.0-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="CUDA 13.0" />
 <img src="https://img.shields.io/badge/D2L-1.0.3-6B5B95?style=for-the-badge" alt="D2L 1.0.3" />
 <img src="https://img.shields.io/badge/Jupyter-Notebook-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter Notebook" />
 <img src="https://img.shields.io/badge/VS%20Code-WSL-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code WSL" />
@@ -54,8 +54,8 @@
 | 1 | Introduction | 정독 보완 예정 |
 | 2 | Preliminaries | 2.1–2.6 학습 · 2.7 보류 |
 | 3 | Linear Neural Networks for Regression | **Completed** |
-| 4 | Linear Neural Networks for Classification | **4.1–4.2 완료 · 4.3 다음** |
-| 5 | Multilayer Perceptrons | Planned |
+| 4 | Linear Neural Networks for Classification | **4.1–4.6 완료 · 4.7 생략** |
+| 5 | Multilayer Perceptrons | **Completed · Kaggle 0.41188** |
 | 6 | Builders' Guide | Planned |
 | 7 | Convolutional Neural Networks | Planned |
 | 8 | Modern Convolutional Neural Networks | Planned |
@@ -106,6 +106,22 @@
 - Softmax와 cross-entropy의 gradient 검증
 - Entropy, surprisal, cross-entropy의 정보이론적 해석
 - Fashion-MNIST 다운로드, minibatch 구성, 데이터 시각화
+- Classification model의 accuracy, validation step, prediction
+- Softmax regression의 직접 구현과 concise implementation
+- Stable cross-entropy와 `log_softmax`
+- Generalization, class imbalance, distribution shift
+
+### Chapter 5 · Multilayer Perceptrons
+
+- Hidden Layer, ReLU, pReLU, Sigmoid, Tanh
+- MLP의 직접 구현과 concise implementation
+- Forward Propagation, Backpropagation, Computational Graph
+- Vanishing Gradient, Exploding Gradient, parameter initialization
+- Deep Learning의 generalization과 regularization
+- Dropout의 직접 구현과 `nn.Dropout`
+- Kaggle House Prices data preprocessing과 Log Price prediction
+- 5-Fold Cross-Validation과 Ensemble submission
+- 첫 Kaggle submission score: **0.41188**
 
 <br />
 
@@ -129,9 +145,20 @@ maverick/
 │   │   ├── sec3_5_concise_implementation_of_linear_regression/
 │   │   ├── sec3_6_generalization/
 │   │   └── sec3_7_weight_decay/
-│   └── ch04_linear_neural_networks_for_classification/
-│       ├── sec4_1_softmax_regression/
-│       └── sec4_2_image_classification_dataset/
+│   ├── ch04_linear_neural_networks_for_classification/
+│   │   ├── sec4_1_softmax_regression/
+│   │   ├── sec4_2_image_classification_dataset/
+│   │   ├── sec4_3_base_classification_model/
+│   │   ├── sec4_4_softmax_regression_implementation_from_scratch/
+│   │   └── sec4_5_concise_softmax_regression/
+│   └── ch05_multilayer_perceptrons/
+│       ├── sec5_1_multilayer_perceptrons/
+│       ├── sec5_2_implementation_of_multilayer_perceptrons/
+│       ├── sec5_4_numerical_stability_and_initialization/
+│       ├── sec5_6_dropout/
+│       └── sec5_7_predicting_house_prices_on_kaggle/
+├── references/
+│   └── d2l/
 ├── .gitignore
 └── README.md
 ```
@@ -158,7 +185,7 @@ code .
 Notebook 오른쪽 위의 kernel 선택 메뉴에서 다음 kernel을 선택한다.
 
 ```text
-Python (maverick)
+Python (maverick .venv)
 ```
 
 또는 프로젝트 interpreter를 직접 선택한다.
@@ -174,7 +201,7 @@ source .venv/bin/activate
 python
 ```
 
-Notebook kernel을 이미 `Python (maverick)`으로 선택했다면, 셀을 실행하기 위해 터미널에서 별도로 가상환경을 활성화할 필요는 없다.
+Notebook kernel을 이미 `Python (maverick .venv)`으로 선택했다면, 셀을 실행하기 위해 터미널에서 별도로 가상환경을 활성화할 필요는 없다.
 
 <br />
 
