@@ -38,6 +38,8 @@ Derived from all 68 notebooks under `src` on 2026-07-27.
 
 ## Notebook ownership
 
-- Codex creates only a blank valid notebook when a new notebook is required.
-- The learner types and executes every cell.
+- Codex creates a valid notebook with only `# 셀 1 — 기본 import` prepopulated when a new notebook is required.
+- Codex executes and saves the import cell with the `Python (maverick)` kernel, verifying the required imports before handoff.
+- Standard D2L imports are `torch`, `from torch import nn`, and `from d2l import torch as d2l`; add other imports only when the source requires them.
+- The learner types and executes every lesson cell after the prebuilt import cell.
 - Codex does not modify existing learner-authored cells or outputs.

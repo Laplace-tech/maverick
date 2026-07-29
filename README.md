@@ -1,17 +1,33 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:071A2B,25:0B3B60,52:126E82,76:6B5B95,100:B565A7&height=290&section=header&text=MAVERICK&fontSize=68&fontColor=EAFBFF&fontAlignY=38&animation=fadeIn&desc=Dive%20into%20Deep%20Learning%20%C2%B7%20PyTorch%20Study&descSize=20&descAlignY=62" width="100%" alt="Maverick D2L header" />
+  <img
+    src="https://capsule-render.vercel.app/api?type=waving&color=0:050816,20:09203F,43:087E8B,67:7B2CBF,86:FF4D8D,100:FFB703&height=320&section=header&text=MAVERICK&fontSize=72&fontColor=F5FCFF&fontAlignY=35&animation=twinkling&desc=Charting%20the%20Deep%20Learning%20Frontier%20with%20PyTorch&descSize=19&descAlignY=58"
+    width="100%"
+    alt="Maverick project header"
+  />
 </p>
 
 <div align="center">
 
-**Dive into Deep Learning PyTorch 실습 기록**
+### Dive into Deep Learning · Source-faithful PyTorch Practice
+
+직접 입력하고, 실행하고, Tensor shape과 device를 확인하며 쌓아가는 Deep Learning 항해 기록
 
 <br />
 
-<img src="https://img.shields.io/badge/Next%20Course-Chapter%206-126E82?style=for-the-badge" alt="Next course Chapter 6" />
-<img src="https://img.shields.io/badge/Required-Chapter%2016-6B5B95?style=for-the-badge" alt="Required Chapter 16" />
-<img src="https://img.shields.io/badge/Target-Chapter%2019-B565A7?style=for-the-badge" alt="Target Chapter 19" />
-<img src="https://img.shields.io/badge/Framework-PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch" />
+<a href="https://d2l.ai/">
+  <img src="https://img.shields.io/badge/Textbook-Dive%20into%20Deep%20Learning-087E8B?style=for-the-badge" alt="D2L textbook" />
+</a>
+<img src="https://img.shields.io/badge/Current-Chapter%206%20Complete-7B2CBF?style=for-the-badge" alt="Chapter 6 complete" />
+<img src="https://img.shields.io/badge/Next-Chapter%207-FF4D8D?style=for-the-badge" alt="Next Chapter 7" />
+<img src="https://img.shields.io/badge/Target-Chapter%2019-FFB703?style=for-the-badge&labelColor=1A1B2E" alt="Target Chapter 19" />
+
+<br />
+<br />
+
+<img src="https://img.shields.io/github/last-commit/Laplace-tech/maverick?style=flat-square&logo=github&color=087E8B" alt="Last commit" />
+<img src="https://img.shields.io/github/repo-size/Laplace-tech/maverick?style=flat-square&logo=github&color=7B2CBF" alt="Repository size" />
+<img src="https://img.shields.io/badge/Notebooks-88-FF4D8D?style=flat-square&logo=jupyter&logoColor=white" alt="88 notebooks" />
+<img src="https://img.shields.io/badge/Kaggle-0.41188-20BEFF?style=flat-square&logo=kaggle&logoColor=white" alt="Kaggle score 0.41188" />
 
 </div>
 
@@ -19,114 +35,173 @@
 
 ---
 
-## Project
+## 🧭 Mission Control
 
-| 항목 | 내용 |
+| Navigation | Current Status |
 |---|---|
-| Textbook | [Dive into Deep Learning](https://d2l.ai/), PyTorch edition |
-| Study Range | Chapter 1–20 · Chapter 21 제외 |
-| Current Position | Chapter 5 완료 · Chapter 6 다음 |
-| Goal | Chapter 16 필수 · Chapter 19 목표 · 여유 시 Chapter 20 GAN |
-| Study Period | 2026.07.23 – 2026.09.07 |
-| Environment | Windows 11 · WSL2 Ubuntu · VS Code |
-| Repository Style | 학습 흐름별 Jupyter Notebook + 누적 복습 테스트 |
+| 📍 Current Position | **Chapter 6 · Builders' Guide — Completed** |
+| 🚀 Next Destination | **Chapter 7 · Convolutional Neural Networks** |
+| 🎯 Required Milestone | Chapter 16 · Natural Language Processing: Applications |
+| 🏴 Target Destination | Chapter 19 · Hyperparameter Optimization |
+| 📚 Study Range | Chapter 1–20 · Chapter 21 excluded |
+| 🗓️ Voyage | 2026.07.23 – 2026.09.07 |
+| 🧪 Practice Scale | **88 notebooks · Chapter 6 notebooks 15** |
+| 🖥️ Workstation | Windows 11 · WSL2 Ubuntu · VS Code · RTX 3060 Ti 8GB |
+
+> **Maverick Rule:** source의 algorithm과 lesson flow를 유지하면서 모든 lesson cell을 직접 입력하고 실행한다.
 
 <br />
 
-## Environment
+## ⚙️ Flight Deck
 
 <div align="center">
 
 <img src="https://img.shields.io/badge/Python-3.12.3-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12.3" />
 <img src="https://img.shields.io/badge/PyTorch-2.13.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch 2.13.0" />
 <img src="https://img.shields.io/badge/CUDA-13.0-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="CUDA 13.0" />
-<img src="https://img.shields.io/badge/D2L-1.0.3-6B5B95?style=for-the-badge" alt="D2L 1.0.3" />
+<img src="https://img.shields.io/badge/GPU-RTX%203060%20Ti%208GB-76B900?style=for-the-badge&logo=nvidia&logoColor=white" alt="RTX 3060 Ti 8GB" />
+
+<br />
+
+<img src="https://img.shields.io/badge/D2L-1.0.3-7B2CBF?style=for-the-badge" alt="D2L 1.0.3" />
 <img src="https://img.shields.io/badge/Jupyter-Notebook-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter Notebook" />
 <img src="https://img.shields.io/badge/VS%20Code-WSL-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code WSL" />
+<img src="https://img.shields.io/badge/Kernel-Python%20(maverick)-087E8B?style=for-the-badge" alt="Python maverick kernel" />
 
 </div>
 
 <br />
 
-## Progress
+```mermaid
+flowchart LR
+    A["Read Source"] --> B["Type Every Cell"]
+    B --> C["Run on PyTorch"]
+    C --> D["Inspect Shape & Device"]
+    D --> E["Explain the Result"]
+    E --> F["Commit the Checkpoint"]
+
+    style A fill:#09203F,color:#F5FCFF,stroke:#087E8B
+    style B fill:#087E8B,color:#F5FCFF,stroke:#5CE1E6
+    style C fill:#7B2CBF,color:#F5FCFF,stroke:#C77DFF
+    style D fill:#FF4D8D,color:#F5FCFF,stroke:#FF8FAB
+    style E fill:#F77F00,color:#111827,stroke:#FFB703
+    style F fill:#FFB703,color:#111827,stroke:#F5FCFF
+```
+
+<br />
+
+## 🗺️ Voyage Map
 
 | Chapter | Course | Status |
 |:---:|---|:---:|
-| 1 | Introduction | 정독 보완 예정 |
-| 2 | Preliminaries | 2.1–2.6 학습 · 2.7 보류 |
-| 3 | Linear Neural Networks for Regression | **Completed** |
-| 4 | Linear Neural Networks for Classification | **4.1–4.6 완료 · 4.7 생략** |
-| 5 | Multilayer Perceptrons | **Completed · Kaggle 0.41188** |
-| 6 | Builders' Guide | Planned |
-| 7 | Convolutional Neural Networks | Planned |
-| 8 | Modern Convolutional Neural Networks | Planned |
-| 9 | Recurrent Neural Networks | Planned |
-| 10 | Modern Recurrent Neural Networks | Planned |
-| 11 | Attention Mechanisms and Transformers | Milestone |
-| 12 | Optimization Algorithms | Planned |
-| 13 | Computational Performance | Planned |
-| 14 | Computer Vision | Planned |
-| 15 | Natural Language Processing: Pretraining | Planned |
-| 16 | Natural Language Processing: Applications | **Required Milestone** |
-| 17 | Reinforcement Learning | Planned |
-| 18 | Gaussian Processes | Planned |
-| 19 | Hyperparameter Optimization | **Target** |
-| 20 | Generative Adversarial Networks | Optional |
-| 21 | Recommender Systems | Excluded |
-| A–B | Mathematics and Tools for Deep Learning | Backlog |
+| 1 | Introduction | 📖 Review Backlog |
+| 2 | Preliminaries | 🟡 2.1–2.6 Complete · 2.7 Deferred |
+| 3 | Linear Neural Networks for Regression | ✅ **Completed** |
+| 4 | Linear Neural Networks for Classification | ✅ **4.1–4.6 Complete · 4.7 Skipped** |
+| 5 | Multilayer Perceptrons | ✅ **Completed · Kaggle 0.41188** |
+| 6 | Builders' Guide | ✅ **Completed** |
+| 7 | Convolutional Neural Networks | 🚀 **Next** |
+| 8 | Modern Convolutional Neural Networks | ⏳ Planned |
+| 9 | Recurrent Neural Networks | ⏳ Planned |
+| 10 | Modern Recurrent Neural Networks | ⏳ Planned |
+| 11 | Attention Mechanisms and Transformers | 💠 Milestone |
+| 12 | Optimization Algorithms | ⏳ Planned |
+| 13 | Computational Performance | ⏳ Planned |
+| 14 | Computer Vision | ⏳ Planned |
+| 15 | Natural Language Processing: Pretraining | ⏳ Planned |
+| 16 | Natural Language Processing: Applications | 🎯 **Required** |
+| 17 | Reinforcement Learning | ⏳ Planned |
+| 18 | Gaussian Processes | ⏳ Planned |
+| 19 | Hyperparameter Optimization | 🏴 **Target** |
+| 20 | Generative Adversarial Networks | ✨ Optional |
+| 21 | Recommender Systems | ⛔ Excluded |
+| A–B | Mathematics and Tools for Deep Learning | 🗃️ Backlog |
 
 <br />
 
-## Contents
+## 💎 Completed Treasure
 
-### Chapter 2 · Preliminaries
+<details>
+<summary><strong>Chapter 2 · Preliminaries</strong></summary>
 
-- Data manipulation: tensor 생성, indexing, broadcasting, memory, NumPy 변환
-- Data preprocessing: CSV 읽기, 결측값 처리, tensor 변환
-- Linear algebra: vector, matrix multiplication, reduction, norm
-- Calculus: derivative, partial derivative, gradient, chain rule
-- Automatic differentiation: computation graph, nonscalar backward, detach
-- Probability and statistics: random variable, joint·conditional probability, Bayes, expectation, variance, covariance
-- Documentation: 추후 보완
+<br />
 
-### Chapter 3 · Linear Neural Networks for Regression
+- Tensor creation, indexing, broadcasting, memory, NumPy conversion
+- CSV preprocessing, missing values, Tensor conversion
+- Vector, matrix multiplication, reduction, norm
+- Derivative, gradient, chain rule
+- Automatic differentiation, nonscalar backward, detach
+- Probability, Bayes, expectation, variance, covariance
 
-- Linear regression의 model, squared loss, minibatch SGD
-- Gaussian noise와 maximum likelihood의 관계
-- 선형회귀를 단일층 fully connected network로 해석
-- `Module`, `DataModule`, `Trainer`의 역할 분리
-- Synthetic regression data와 PyTorch `DataLoader`
-- Linear regression의 직접 구현과 PyTorch 간결 구현
-- Training error, generalization error, underfitting, overfitting, model selection
-- L2 regularization과 weight decay
+</details>
 
-### Chapter 4 · Linear Neural Networks for Classification
+<details>
+<summary><strong>Chapter 3 · Linear Neural Networks for Regression</strong></summary>
 
-- Multi-class classification과 one-hot encoding
+<br />
+
+- Linear regression, squared loss, minibatch SGD
+- Gaussian noise and maximum likelihood
+- `Module`, `DataModule`, `Trainer`
+- Synthetic regression data and `DataLoader`
+- Scratch and concise implementations
+- Generalization, model selection, weight decay
+
+</details>
+
+<details>
+<summary><strong>Chapter 4 · Linear Neural Networks for Classification</strong></summary>
+
+<br />
+
+- Multi-class classification and one-hot encoding
 - Logit, stable softmax, cross-entropy loss
-- Softmax와 cross-entropy의 gradient 검증
-- Entropy, surprisal, cross-entropy의 정보이론적 해석
-- Fashion-MNIST 다운로드, minibatch 구성, 데이터 시각화
-- Classification model의 accuracy, validation step, prediction
-- Softmax regression의 직접 구현과 concise implementation
-- Stable cross-entropy와 `log_softmax`
-- Generalization, class imbalance, distribution shift
+- Entropy, surprisal, information theory
+- Fashion-MNIST, accuracy, validation, prediction
+- Scratch and concise softmax regression
+- `log_softmax`, class imbalance, distribution shift
 
-### Chapter 5 · Multilayer Perceptrons
+</details>
 
-- Hidden Layer, ReLU, pReLU, Sigmoid, Tanh
-- MLP의 직접 구현과 concise implementation
-- Forward Propagation, Backpropagation, Computational Graph
-- Vanishing Gradient, Exploding Gradient, parameter initialization
-- Deep Learning의 generalization과 regularization
-- Dropout의 직접 구현과 `nn.Dropout`
-- Kaggle House Prices data preprocessing과 Log Price prediction
-- 5-Fold Cross-Validation과 Ensemble submission
-- 첫 Kaggle submission score: **0.41188**
+<details>
+<summary><strong>Chapter 5 · Multilayer Perceptrons</strong></summary>
 
 <br />
 
-## Repository Structure
+- Hidden Layer and Activation Functions
+- Scratch and concise MLP
+- Forward Propagation, Backpropagation, Computational Graph
+- Vanishing Gradient, Exploding Gradient, initialization
+- Dropout and regularization
+- Kaggle House Prices preprocessing
+- 5-Fold Cross-Validation and Ensemble submission
+- First public Kaggle score: **0.41188**
+
+</details>
+
+<details open>
+<summary><strong>Chapter 6 · Builders' Guide — Latest Clear!</strong></summary>
+
+<br />
+
+- `nn.Module`, custom Module, `MySequential`
+- Arbitrary Python control flow inside `forward`
+- Parameter access, nested Module, tied parameters
+- Built-in and custom initialization
+- Lazy initialization and parameter materialization
+- Custom Layers with and without parameters
+- Tensor and Model Parameter serialization
+- CPU/GPU Device selection and Tensor transfer
+- Model and mini-batch GPU placement
+- GPU-aware `Trainer` method injection
+
+**15 source-faithful notebooks completed.**
+
+</details>
+
+<br />
+
+## 🗂️ Repository Atlas
 
 ```text
 maverick/
@@ -139,73 +214,93 @@ maverick/
 │   │   ├── sec2_5_automatic_differentiation/
 │   │   └── sec2_6_probability_and_statistics/
 │   ├── ch03_linear_neural_networks_for_regression/
-│   │   ├── sec3_1_linear_regression/
-│   │   ├── sec3_2_object_oriented_design_for_implementation/
-│   │   ├── sec3_3_synthetic_regression_data/
-│   │   ├── sec3_4_linear_regression_implementation_from_scratch/
-│   │   ├── sec3_5_concise_implementation_of_linear_regression/
-│   │   ├── sec3_6_generalization/
-│   │   └── sec3_7_weight_decay/
 │   ├── ch04_linear_neural_networks_for_classification/
-│   │   ├── sec4_1_softmax_regression/
-│   │   ├── sec4_2_image_classification_dataset/
-│   │   ├── sec4_3_base_classification_model/
-│   │   ├── sec4_4_softmax_regression_implementation_from_scratch/
-│   │   └── sec4_5_concise_softmax_regression/
-│   └── ch05_multilayer_perceptrons/
-│       ├── sec5_1_multilayer_perceptrons/
-│       ├── sec5_2_implementation_of_multilayer_perceptrons/
-│       ├── sec5_4_numerical_stability_and_initialization/
-│       ├── sec5_6_dropout/
-│       └── sec5_7_predicting_house_prices_on_kaggle/
+│   ├── ch05_multilayer_perceptrons/
+│   └── ch06_builders_guide/
+│       ├── sec6_1_layers_and_modules/
+│       ├── sec6_2_parameter_management/
+│       ├── sec6_3_parameter_initialization/
+│       ├── sec6_4_lazy_initialization/
+│       ├── sec6_5_custom_layers/
+│       ├── sec6_6_file_io/
+│       └── sec6_7_gpus/
 ├── references/
 │   └── d2l/
+│       ├── CHAT_TUTOR_MANUAL.md
+│       ├── CODE_STYLE.md
+│       └── STUDY_CHECKPOINT.md
 ├── .gitignore
 └── README.md
 ```
 
-각 실습 노트북은 다음 규칙으로 배치한다.
+Notebook naming:
 
 ```text
 src/chXX_chapter_name/secX_X_section_name/NN_topic_name.ipynb
 ```
 
-데이터셋, 모델 weight, notebook checkpoint와 생성 결과물은 Git에서 제외한다.
+Dataset, Model Weight, notebook checkpoint와 generated output은 Git에서 제외한다.
 
 <br />
 
-## Run in VS Code
+## 🧪 Chapter 6 Notebook Log
 
-브라우저 Jupyter가 아니라 WSL의 VS Code Notebook 환경에서 실행한다.
+| Section | Practice |
+|---|---|
+| 6.1 | Module · `MySequential` · custom `forward` |
+| 6.2 | Parameter access · tied parameters |
+| 6.3 | Built-in initialization · custom initialization |
+| 6.4 | Lazy initialization |
+| 6.5 | Parameter-free Layer · parameterized Layer |
+| 6.6 | Tensor serialization · Model Parameter serialization |
+| 6.7 | Computing Devices · Tensors and GPUs · Neural Networks and GPUs |
+
+<br />
+
+## ▶️ Launch in VS Code
 
 ```bash
 cd ~/projects/maverick
 code .
 ```
 
-Notebook 오른쪽 위의 kernel 선택 메뉴에서 다음 kernel을 선택한다.
+Notebook 오른쪽 위에서 다음 kernel을 선택한다.
 
 ```text
 Python (maverick .venv)
 ```
 
-또는 프로젝트 interpreter를 직접 선택한다.
+Project interpreter:
 
 ```text
 /home/anna/projects/maverick/.venv/bin/python
 ```
 
-터미널에서 Python을 실행할 때는 가상환경을 활성화한다.
+Terminal session이 필요할 때:
 
 ```bash
 source .venv/bin/activate
 python
 ```
 
-Notebook kernel을 이미 `Python (maverick .venv)`으로 선택했다면, 셀을 실행하기 위해 터미널에서 별도로 가상환경을 활성화할 필요는 없다.
+Notebook이 `Python (maverick .venv)` kernel에 연결되어 있다면 cell 실행만을 위해 Terminal에서 별도로 environment를 활성화할 필요는 없다.
 
 <br />
 
+---
+
+<div align="center">
+
+### `Chapter 6: CLEARED` · `Next Voyage: Convolutional Neural Networks`
+
+**Read deeply. Type deliberately. Verify everything.**
+
+</div>
+
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:B565A7,24:6B5B95,48:126E82,75:0B3B60,100:071A2B&height=170&section=footer" width="100%" alt="Maverick footer" />
+  <img
+    src="https://capsule-render.vercel.app/api?type=waving&color=0:FFB703,18:FF4D8D,43:7B2CBF,70:087E8B,100:050816&height=180&section=footer"
+    width="100%"
+    alt="Maverick project footer"
+  />
 </p>

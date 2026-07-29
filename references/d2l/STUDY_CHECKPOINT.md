@@ -52,6 +52,25 @@ Updated: 2026-07-28 KST
 - Section 5.7.9 Summary and Discussion is complete.
 - Section 5.7.10 Exercises is skipped by default.
 - Chapter 5 is complete.
+- Chapter 6 Builders' Guide is complete.
+- Section 6.1 Layers and Modules practice is complete.
+- Practice notebooks:
+  - `src/ch06_builders_guide/sec6_1_layers_and_modules/01_layers_and_modules.ipynb`
+  - `src/ch06_builders_guide/sec6_1_layers_and_modules/02_my_sequential.ipynb`
+  - `src/ch06_builders_guide/sec6_1_layers_and_modules/03_custom_forward_propagation.ipynb`
+- Section 6.2 Parameter Management practice is complete.
+- Section 6.3 Parameter Initialization practice is complete.
+- Section 6.4 Lazy Initialization practice is complete.
+- Section 6.5 Custom Layers practice is complete.
+- Section 6.6 File I/O practice is complete.
+- Section 6.7 GPUs practice is complete through 6.7.3 Neural Networks and GPUs.
+- Section 6.7.4 Summary is complete; it contains no additional implementation.
+- Section 6.7.5 Exercises is skipped by default.
+- GPU practice notebooks:
+  - `src/ch06_builders_guide/sec6_7_gpus/01_computing_devices.ipynb`
+  - `src/ch06_builders_guide/sec6_7_gpus/02_tensors_and_gpus.ipynb`
+  - `src/ch06_builders_guide/sec6_7_gpus/03_neural_networks_and_gpus.ipynb`
+- Next starting point: Chapter 7 introduction. The Chapter 7 source text has not yet been supplied.
 
 ## Teaching and notebook rules
 
@@ -62,8 +81,10 @@ Updated: 2026-07-28 KST
 - For each subsection, provide the full translation first, then an undergraduate-level explanation, formulas and tensor shapes, implementation pitfalls, and practice code when code is appropriate.
 - Skip subsections titled `Exercises` unless the learner explicitly requests them.
 - Group notebooks by a coherent implementation flow and split them only when they become unwieldy.
-- When a notebook is needed, Codex creates only a blank valid `.ipynb`.
-- The learner manually types and runs every code cell.
+- When a notebook is needed, Codex creates a valid `.ipynb` whose first cell is a basic import cell titled `# 셀 1 — 기본 import`.
+- Codex executes and saves that import cell with the `Python (maverick)` kernel to verify that the notebook kernel and required imports work.
+- A standard D2L import cell contains `torch`, `nn`, and `d2l`; add other source-required imports only when needed.
+- The learner manually types and runs every lesson cell after the prebuilt import cell.
 - Codex provides code in chat, divided cell by cell.
 - Every code cell begins with a title comment such as `# 셀 3 — 안정적인 교차 엔트로피`.
 - Always identify the notebook path before presenting cells.

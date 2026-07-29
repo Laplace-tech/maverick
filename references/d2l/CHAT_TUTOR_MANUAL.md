@@ -71,7 +71,7 @@ For every supplied subsection, respond in this order:
 - Do not create or modify files.
 - Do not design notebook structure.
 - Do not provide new implementation cells or replace the book's code with an alternative architecture.
-- Codex separately handles blank notebook creation and learner-typed practice code.
+- Codex separately creates notebooks with a pre-executed basic import cell and provides the remaining learner-typed practice code.
 - If the source includes code, explain conceptually what the original code is doing, but leave runnable cell formatting and repository adaptation to Codex.
 
 When I provide the source, begin immediately without asking for confirmation unless the source range is genuinely ambiguous.

@@ -23,7 +23,7 @@ You are continuing a Korean-language D2L study session in:
 ## Current division of work
 
 - Chat mode now handles complete source translation and conceptual tutoring using `/home/anna/projects/maverick/references/d2l/CHAT_TUTOR_MANUAL.md`.
-- Codex handles only implementation work: inspect the supplied source code, decide whether a notebook is genuinely needed, create only a blank notebook when missing, and provide learner-typed code cells in chat.
+- Codex handles only implementation work: inspect the supplied source code, decide whether a notebook is genuinely needed, create it with a pre-executed basic import cell when missing, and provide the remaining learner-typed code cells in chat.
 - When 마벨러스 says `다음`, `다음거`, or equivalent, skip the complete translation and conceptual lecture unless explicitly requested.
 - If the next source subsection contains implementation code, preserve its algorithm, class hierarchy, data helper, trainer, and flow while adapting only repository syntax and formatting.
 - If the next subsection contains no implementation code and no useful practice is warranted, do not invent code or create a notebook. State that briefly.
@@ -55,10 +55,12 @@ You are continuing a Korean-language D2L study session in:
 
 ## Notebook contract
 
-- 마벨러스 learns by manually typing and running the code.
-- Codex must never populate a notebook with lesson code.
-- Codex must never execute the learner's notebook.
-- When a notebook is needed, create only a blank, valid `.ipynb`.
+- 마벨러스 learns by manually typing and running the lesson code.
+- Codex populates only the first cell of a new notebook with `# 셀 1 — 기본 import` and the imports required by the notebook.
+- Codex executes and saves only that import cell with the `Python (maverick)` kernel to verify the kernel and imports before handoff.
+- Standard D2L imports are `torch`, `from torch import nn`, and `from d2l import torch as d2l`; add other imports only when required.
+- Codex must never populate or execute the learner-authored lesson cells after the import cell.
+- When a notebook is needed, create a valid `.ipynb` containing only the verified import cell.
 - Before presenting code, always state the exact notebook path.
 - Provide all code in chat, divided cell by cell.
 - Every code cell must begin with a title comment, for example:
@@ -83,7 +85,7 @@ You are continuing a Korean-language D2L study session in:
 - Never use broad staging such as `git add .`.
 - Do not commit or push unless explicitly requested.
 - Keep the repository minimal and avoid speculative scaffolding.
-- For lesson work, make no file changes unless a required blank notebook is missing or the learner explicitly asks for persistence/documentation.
+- For lesson work, make no file changes unless a required notebook and its verified import cell are missing or the learner explicitly asks for persistence/documentation.
 
 ## Persistent source of truth
 
