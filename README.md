@@ -17,8 +17,8 @@
 <a href="https://d2l.ai/">
   <img src="https://img.shields.io/badge/Textbook-Dive%20into%20Deep%20Learning-087E8B?style=for-the-badge" alt="D2L textbook" />
 </a>
-<img src="https://img.shields.io/badge/Current-Chapter%206%20Complete-7B2CBF?style=for-the-badge" alt="Chapter 6 complete" />
-<img src="https://img.shields.io/badge/Next-Chapter%207-FF4D8D?style=for-the-badge" alt="Next Chapter 7" />
+<img src="https://img.shields.io/badge/Current-Chapter%207%20Complete-7B2CBF?style=for-the-badge" alt="Chapter 7 complete" />
+<img src="https://img.shields.io/badge/Next-Chapter%208-FF4D8D?style=for-the-badge" alt="Next Chapter 8" />
 <img src="https://img.shields.io/badge/Target-Chapter%2019-FFB703?style=for-the-badge&labelColor=1A1B2E" alt="Target Chapter 19" />
 
 <br />
@@ -26,7 +26,7 @@
 
 <img src="https://img.shields.io/github/last-commit/Laplace-tech/maverick?style=flat-square&logo=github&color=087E8B" alt="Last commit" />
 <img src="https://img.shields.io/github/repo-size/Laplace-tech/maverick?style=flat-square&logo=github&color=7B2CBF" alt="Repository size" />
-<img src="https://img.shields.io/badge/Notebooks-88-FF4D8D?style=flat-square&logo=jupyter&logoColor=white" alt="88 notebooks" />
+<img src="https://img.shields.io/badge/Notebooks-97-FF4D8D?style=flat-square&logo=jupyter&logoColor=white" alt="97 notebooks" />
 <img src="https://img.shields.io/badge/Kaggle-0.41188-20BEFF?style=flat-square&logo=kaggle&logoColor=white" alt="Kaggle score 0.41188" />
 
 </div>
@@ -39,13 +39,13 @@
 
 | Navigation | Current Status |
 |---|---|
-| 📍 Current Position | **Chapter 6 · Builders' Guide — Completed** |
-| 🚀 Next Destination | **Chapter 7 · Convolutional Neural Networks** |
+| 📍 Current Position | **Chapter 7 · Convolutional Neural Networks — Completed** |
+| 🚀 Next Destination | **Chapter 8 · Modern Convolutional Neural Networks** |
 | 🎯 Required Milestone | Chapter 16 · Natural Language Processing: Applications |
 | 🏴 Target Destination | Chapter 19 · Hyperparameter Optimization |
 | 📚 Study Range | Chapter 1–20 · Chapter 21 excluded |
 | 🗓️ Voyage | 2026.07.23 – 2026.09.07 |
-| 🧪 Practice Scale | **88 notebooks · Chapter 6 notebooks 15** |
+| 🧪 Practice Scale | **97 notebooks · Chapter 7 notebooks 9** |
 | 🖥️ Workstation | Windows 11 · WSL2 Ubuntu · VS Code · RTX 3060 Ti 8GB |
 
 > **Maverick Rule:** source의 algorithm과 lesson flow를 유지하면서 모든 lesson cell을 직접 입력하고 실행한다.
@@ -100,8 +100,8 @@ flowchart LR
 | 4 | Linear Neural Networks for Classification | ✅ **4.1–4.6 Complete · 4.7 Skipped** |
 | 5 | Multilayer Perceptrons | ✅ **Completed · Kaggle 0.41188** |
 | 6 | Builders' Guide | ✅ **Completed** |
-| 7 | Convolutional Neural Networks | 🚀 **Next** |
-| 8 | Modern Convolutional Neural Networks | ⏳ Planned |
+| 7 | Convolutional Neural Networks | ✅ **Completed** |
+| 8 | Modern Convolutional Neural Networks | 🚀 **Next** |
 | 9 | Recurrent Neural Networks | ⏳ Planned |
 | 10 | Modern Recurrent Neural Networks | ⏳ Planned |
 | 11 | Attention Mechanisms and Transformers | 💠 Milestone |
@@ -179,8 +179,8 @@ flowchart LR
 
 </details>
 
-<details open>
-<summary><strong>Chapter 6 · Builders' Guide — Latest Clear!</strong></summary>
+<details>
+<summary><strong>Chapter 6 · Builders' Guide</strong></summary>
 
 <br />
 
@@ -196,6 +196,26 @@ flowchart LR
 - GPU-aware `Trainer` method injection
 
 **15 source-faithful notebooks completed.**
+
+</details>
+
+<details open>
+<summary><strong>Chapter 7 · Convolutional Neural Networks — Latest Clear!</strong></summary>
+
+<br />
+
+- Image convolution and two-dimensional cross-correlation
+- Learnable edge-detection kernels
+- Padding, stride, and output-shape calculation
+- Multiple input and output channels
+- `1×1` convolution as channel-wise linear transformation
+- Maximum pooling and average pooling
+- Multi-channel pooling behavior
+- LeNet architecture and layer-by-layer Tensor shapes
+- Fashion-MNIST training on RTX 3060 Ti
+- Final validation accuracy: **73.39%**
+
+**9 source-faithful notebooks completed.**
 
 </details>
 
@@ -216,14 +236,20 @@ maverick/
 │   ├── ch03_linear_neural_networks_for_regression/
 │   ├── ch04_linear_neural_networks_for_classification/
 │   ├── ch05_multilayer_perceptrons/
-│   └── ch06_builders_guide/
-│       ├── sec6_1_layers_and_modules/
-│       ├── sec6_2_parameter_management/
-│       ├── sec6_3_parameter_initialization/
-│       ├── sec6_4_lazy_initialization/
-│       ├── sec6_5_custom_layers/
-│       ├── sec6_6_file_io/
-│       └── sec6_7_gpus/
+│   ├── ch06_builders_guide/
+│   │   ├── sec6_1_layers_and_modules/
+│   │   ├── sec6_2_parameter_management/
+│   │   ├── sec6_3_parameter_initialization/
+│   │   ├── sec6_4_lazy_initialization/
+│   │   ├── sec6_5_custom_layers/
+│   │   ├── sec6_6_file_io/
+│   │   └── sec6_7_gpus/
+│   └── ch07_convolutional_neural_networks/
+│       ├── sec7_2_convolutions_for_images/
+│       ├── sec7_3_padding_and_stride/
+│       ├── sec7_4_multiple_input_and_multiple_output_channels/
+│       ├── sec7_5_pooling/
+│       └── sec7_6_lenet/
 ├── references/
 │   └── d2l/
 │       ├── CHAT_TUTOR_MANUAL.md
@@ -254,6 +280,18 @@ Dataset, Model Weight, notebook checkpoint와 generated output은 Git에서 제�
 | 6.5 | Parameter-free Layer · parameterized Layer |
 | 6.6 | Tensor serialization · Model Parameter serialization |
 | 6.7 | Computing Devices · Tensors and GPUs · Neural Networks and GPUs |
+
+<br />
+
+## 🧪 Chapter 7 Notebook Log
+
+| Section | Practice |
+|---|---|
+| 7.2 | Cross-correlation · edge detection · kernel learning |
+| 7.3 | Padding · stride · output shapes |
+| 7.4 | Multiple channels · `1×1` convolution |
+| 7.5 | Maximum pooling · average pooling · multiple channels |
+| 7.6 | LeNet architecture · Fashion-MNIST GPU training |
 
 <br />
 
@@ -291,7 +329,7 @@ Notebook이 `Python (maverick .venv)` kernel에 연결되어 있다면 cell 실�
 
 <div align="center">
 
-### `Chapter 6: CLEARED` · `Next Voyage: Convolutional Neural Networks`
+### `Chapter 7: CLEARED` · `Next Voyage: Modern Convolutional Neural Networks`
 
 **Read deeply. Type deliberately. Verify everything.**
 

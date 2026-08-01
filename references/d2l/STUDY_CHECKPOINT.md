@@ -1,6 +1,6 @@
 # D2L Study Checkpoint
 
-Updated: 2026-07-28 KST
+Updated: 2026-08-02 KST
 
 ## Current progress
 
@@ -70,7 +70,12 @@ Updated: 2026-07-28 KST
   - `src/ch06_builders_guide/sec6_7_gpus/01_computing_devices.ipynb`
   - `src/ch06_builders_guide/sec6_7_gpus/02_tensors_and_gpus.ipynb`
   - `src/ch06_builders_guide/sec6_7_gpus/03_neural_networks_and_gpus.ipynb`
-- Next starting point: Chapter 7 introduction. The Chapter 7 source text has not yet been supplied.
+- Chapter 7 source text is preserved in full and was verified on 2026-08-01.
+- Chapter 7 Convolutional Neural Networks is complete through Section 7.6.3 Summary.
+- Sections 7.1.6, 7.2.8, 7.3.4, 7.4.5, 7.5.5, and 7.6.4 Exercises were skipped by default.
+- Nine Chapter 7 practice notebooks cover cross-correlation, kernel learning, padding and stride, multiple channels, `1x1` convolution, pooling, and LeNet.
+- LeNet was trained on Fashion-MNIST with the RTX 3060 Ti; final validation accuracy was 73.39% after 10 epochs.
+- Next starting point: Chapter 8 Modern Convolutional Neural Networks. Await the learner-supplied Chapter 8 source text before proceeding.
 
 ## Teaching and notebook rules
 
@@ -79,15 +84,19 @@ Updated: 2026-07-28 KST
 - If the source has no implementation code and no useful practice is warranted, Codex does not invent code or create a notebook.
 - Cover ordinary sections and subsections in the original book order.
 - For each subsection, provide the full translation first, then an undergraduate-level explanation, formulas and tensor shapes, implementation pitfalls, and practice code when code is appropriate.
+- Build the core explanation with visual data-flow diagrams and the source equations; add clearly identified supplemental equations when they materially improve first-time understanding.
+- When source implementation appears, preserve its algorithm and lesson flow while reorganizing it into learner-sized cells with shape checks, intermediate outputs, or small visual probes that help a first-time learner internalize the CNN principle.
 - Skip subsections titled `Exercises` unless the learner explicitly requests them.
 - Group notebooks by a coherent implementation flow and split them only when they become unwieldy.
-- When a notebook is needed, Codex creates a valid `.ipynb` whose first cell is a basic import cell titled `# 셀 1 — 기본 import`.
+- When a notebook is needed, Codex creates a valid `.ipynb` whose first cell contains only the required imports; do not add a title comment such as `# 셀 1 — 기본 import` to this import cell.
 - Codex executes and saves that import cell with the `Python (maverick)` kernel to verify that the notebook kernel and required imports work.
 - A standard D2L import cell contains `torch`, `nn`, and `d2l`; add other source-required imports only when needed.
 - The learner manually types and runs every lesson cell after the prebuilt import cell.
 - Codex provides code in chat, divided cell by cell.
 - Every code cell begins with a title comment such as `# 셀 3 — 안정적인 교차 엔트로피`.
 - Always identify the notebook path before presenting cells.
+- Keep Pylance types stable in tensor helpers: add `torch.Tensor` annotations and use `torch.stack(...).sum(dim=0)` instead of Python `sum(...)` over tensors.
+- Every supplied practice block must pass four gates before handoff: preserve the source algorithm and lesson flow, use explicit tensor types where inference is unstable, remain clean under Pylance, and succeed in an equivalent Runtime check. Do not reproduce unclear source syntax verbatim merely for visual fidelity.
 - Use VS Code with `.venv/bin/python` as the interpreter/kernel.
 - Before a new implementation block, lightly verify that the active `maverick .venv` kernel can execute code; never terminate a healthy kernel.
 
@@ -99,6 +108,8 @@ Updated: 2026-07-28 KST
   - SHA-256: `f75bf11c5ed1fca9f879968fbf94f1e2e7fc22077354364dcda2586fa45ae33b`
 - `source/ch05_section_5_1_excerpt.txt`
   - SHA-256: `978c3f6cc347a72e1dca7955cbda594429f0fe43440cb4acd4cc4ede38b99667`
+- `source/ch07_full.txt`
+  - SHA-256: `59b63df44b79fa18fbf333cb6fa0cd7e20c701db9b261e768b5b01bbe7236de5`
 
 ## Existing Chapter 4 notebooks
 

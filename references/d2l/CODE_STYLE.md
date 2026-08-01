@@ -22,6 +22,11 @@ Derived from all 68 notebooks under `src` on 2026-07-27.
 - Keep `logits` separate from probabilities and pass logits directly to stable combined losses such as `CrossEntropyLoss`.
 - Clear accumulated gradients before each new backward pass.
 - Use `@torch.no_grad()` or `with torch.no_grad():` where gradient tracking is genuinely unnecessary; this rule does not prohibit standard PyTorch decorators.
+- Give learner-defined tensor helpers explicit `torch.Tensor` parameter and return annotations when Pylance cannot infer a stable type.
+- Do not aggregate a generator of tensors with Python's built-in `sum(...)`: its integer start value can widen the inferred result to `torch.Tensor | int`. Use `torch.stack(tensors, dim=0).sum(dim=0)` instead.
+- Treat source fidelity as algorithm and lesson-flow fidelity, not verbatim preservation of unclear syntax.
+- Before presenting practice code, verify all four gates: source algorithm preserved, tensor types explicit where needed, Pylance type errors eliminated, and equivalent Runtime execution successful.
+- Runtime success alone is not sufficient for learner-facing code.
 
 ## Repository evidence
 
@@ -38,7 +43,7 @@ Derived from all 68 notebooks under `src` on 2026-07-27.
 
 ## Notebook ownership
 
-- Codex creates a valid notebook with only `# 셀 1 — 기본 import` prepopulated when a new notebook is required.
+- Codex creates a valid notebook with only the standard imports prepopulated when a new notebook is required; the import cell has no title comment.
 - Codex executes and saves the import cell with the `Python (maverick)` kernel, verifying the required imports before handoff.
 - Standard D2L imports are `torch`, `from torch import nn`, and `from d2l import torch as d2l`; add other imports only when the source requires them.
 - The learner types and executes every lesson cell after the prebuilt import cell.
