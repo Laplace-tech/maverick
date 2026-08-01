@@ -14,6 +14,32 @@
 
 </div>
 
+## Voyage Map
+
+| Chapter | Topic | Status |
+|:---:|---|---|
+| 1 | Introduction | Review backlog |
+| 2 | Preliminaries | 2.1–2.6 complete · 2.7 deferred |
+| 3 | Linear Neural Networks for Regression | Complete |
+| 4 | Linear Neural Networks for Classification | 4.1–4.6 complete · 4.7 skipped |
+| 5 | Multilayer Perceptrons | Complete |
+| 6 | Builders' Guide | Complete |
+| 7 | Convolutional Neural Networks | **Complete** |
+| 8 | Modern Convolutional Neural Networks | **Next** |
+| 9 | Recurrent Neural Networks | Planned |
+| 10 | Modern Recurrent Neural Networks | Planned |
+| 11 | Attention Mechanisms and Transformers | Planned |
+| 12 | Optimization Algorithms | Planned |
+| 13 | Computational Performance | Planned |
+| 14 | Computer Vision | Planned |
+| 15 | Natural Language Processing: Pretraining | Planned |
+| 16 | Natural Language Processing: Applications | Required milestone |
+| 17 | Reinforcement Learning | Planned |
+| 18 | Gaussian Processes | Planned |
+| 19 | Hyperparameter Optimization | Target |
+| 20 | Generative Adversarial Networks | Optional |
+| 21 | Recommender Systems | Excluded |
+
 ## Launch in VS Code
 
 ```bash
