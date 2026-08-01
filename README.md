@@ -40,11 +40,6 @@
 | 20 | Generative Adversarial Networks | Optional |
 | 21 | Recommender Systems | Excluded |
 
-## Reference notebooks
-
-- [Automatic Differentiation](https://github.com/Laplace-tech/maverick/blob/main/src/ch02_preliminaries/sec2_5_automatic_differentiation/01_a_simple_function.ipynb)
-- [Weight Decay](https://github.com/Laplace-tech/maverick/blob/main/src/ch03_linear_neural_networks_for_regression/sec3_7_weight_decay/01_weight_decay_from_scratch.ipynb)
-
 ## Launch in VS Code
 
 ```bash
