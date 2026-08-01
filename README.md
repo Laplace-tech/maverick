@@ -6,8 +6,13 @@
   />
 </p>
 
-[Dive into Deep Learning](https://d2l.ai/)을 PyTorch로 직접 구현하며 정리한 학습 기록.
-각 notebook은 코드를 직접 입력하고 실행하면서 tensor shape, training process, device 동작을 확인하는 방식으로 구성.
+<div align="center">
+
+### Dive into Deep Learning · Source-faithful PyTorch Practice
+
+직접 입력하고, 실행하고, Tensor shape과 device를 확인하며 쌓아가는 Deep Learning 항해 기록
+
+</div>
 
 ## Study progress
 
