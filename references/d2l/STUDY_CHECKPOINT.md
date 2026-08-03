@@ -1,6 +1,6 @@
 # D2L Study Checkpoint
 
-Updated: 2026-08-02 KST
+Updated: 2026-08-03 KST
 
 ## Current progress
 
@@ -75,7 +75,14 @@ Updated: 2026-08-02 KST
 - Sections 7.1.6, 7.2.8, 7.3.4, 7.4.5, 7.5.5, and 7.6.4 Exercises were skipped by default.
 - Nine Chapter 7 practice notebooks cover cross-correlation, kernel learning, padding and stride, multiple channels, `1x1` convolution, pooling, and LeNet.
 - LeNet was trained on Fashion-MNIST with the RTX 3060 Ti; final validation accuracy was 73.39% after 10 epochs.
-- Next starting point: Chapter 8 Modern Convolutional Neural Networks. Await the learner-supplied Chapter 8 source text before proceeding.
+- Chapter 8 source text was supplied, preserved in full, and range-validated on 2026-08-03.
+- The preserved range begins with the Chapter 8 introduction and ends after Section 8.8.6 Exercises.
+- Section 8.1 Deep Convolutional Neural Networks (AlexNet) is complete, including architecture, initialization, device verification, and Fashion-MNIST training.
+- Section 8.2 Networks Using Blocks (VGG) is complete with separate block and reduced VGG-11 model notebooks.
+- Section 8.3 Network in Network (NiN) is complete through 8.3.4 Summary, including `1x1` convolution equivalence, Global Average Pooling, shape tracing, and Fashion-MNIST training.
+- Sections 8.1.8, 8.2.5, and 8.3.5 Exercises were skipped by default.
+- Chapter 8 practice notebooks currently cover AlexNet, VGG blocks and reduced VGG-11, and NiN blocks and model training.
+- Next starting point: Section 8.4 Multi-Branch Networks (GoogLeNet).
 
 ## Teaching and notebook rules
 
@@ -110,6 +117,14 @@ Updated: 2026-08-02 KST
   - SHA-256: `978c3f6cc347a72e1dca7955cbda594429f0fe43440cb4acd4cc4ede38b99667`
 - `source/ch07_full.txt`
   - SHA-256: `59b63df44b79fa18fbf333cb6fa0cd7e20c701db9b261e768b5b01bbe7236de5`
+- `source/ch08_full.txt`
+  - SHA-256: `84140dde76766ccc1ff0472ecc3160c51e151edc67428d4fe7f5938cefdeaa8e`
+- `source/ch08_section_8_1_alexnet.txt`
+  - SHA-256: `a21cf5098b8de7609e5b7dbb60d3d9cf7cbd5d0b5b9d92356ac741fddff61c1e`
+  - Verified against the corresponding Chapter 8 full-source range on 2026-08-03; substantive text and code match.
+- `source/ch08_sections_8_2_to_8_5.txt`
+  - SHA-256: `096e5970f8324fba4bb15f487b922f1713a52a68156665708726e3c495fb94a4`
+  - Covers Sections 8.2 through 8.5.7 and matches the corresponding full-source range except for terminal discussion-link punctuation.
 
 ## Existing Chapter 4 notebooks
 

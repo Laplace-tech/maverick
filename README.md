@@ -25,7 +25,7 @@
 | 5 | Multilayer Perceptrons | Done |
 | 6 | Builders' Guide | Done |
 | 7 | Convolutional Neural Networks | Done |
-| **8** | **Modern Convolutional Neural Networks** | **Next** |
+| **8** | **Modern Convolutional Neural Networks** | **8.1–8.3 done · 8.4 next** |
 | 9 | Recurrent Neural Networks | Planned |
 | 10 | Modern Recurrent Neural Networks | Planned |
 | 11 | Attention Mechanisms and Transformers | Planned |
@@ -49,7 +49,8 @@ src/
 ├── ch04_linear_neural_networks_for_classification/
 ├── ch05_multilayer_perceptrons/
 ├── ch06_builders_guide/
-└── ch07_convolutional_neural_networks/
+├── ch07_convolutional_neural_networks/
+└── ch08_modern_convolutional_neural_networks/
 ```
 
 각 chapter 아래에 section별 directory를 두고, 하나의 notebook에서 하나의 학습 흐름을 다룸.
