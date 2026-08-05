@@ -25,8 +25,8 @@
 | 5 | Multilayer Perceptrons | Done |
 | 6 | Builders' Guide | Done |
 | 7 | Convolutional Neural Networks | Done |
-| **8** | **Modern Convolutional Neural Networks** | **8.1–8.3 done · 8.4 next** |
-| 9 | Recurrent Neural Networks | Planned |
+| **8** | **Modern Convolutional Neural Networks** | **Done through 8.7 · 8.8 skipped** |
+| **9** | **Recurrent Neural Networks** | **Next** |
 | 10 | Modern Recurrent Neural Networks | Planned |
 | 11 | Attention Mechanisms and Transformers | Planned |
 | 12 | Optimization Algorithms | Planned |
