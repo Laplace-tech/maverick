@@ -77,12 +77,13 @@ Updated: 2026-08-03 KST
 - LeNet was trained on Fashion-MNIST with the RTX 3060 Ti; final validation accuracy was 73.39% after 10 epochs.
 - Chapter 8 source text was supplied, preserved in full, and range-validated on 2026-08-03.
 - The preserved range begins with the Chapter 8 introduction and ends after Section 8.8.6 Exercises.
-- Section 8.1 Deep Convolutional Neural Networks (AlexNet) is complete, including architecture, initialization, device verification, and Fashion-MNIST training.
-- Section 8.2 Networks Using Blocks (VGG) is complete with separate block and reduced VGG-11 model notebooks.
-- Section 8.3 Network in Network (NiN) is complete through 8.3.4 Summary, including `1x1` convolution equivalence, Global Average Pooling, shape tracing, and Fashion-MNIST training.
-- Sections 8.1.8, 8.2.5, and 8.3.5 Exercises were skipped by default.
-- Chapter 8 practice notebooks currently cover AlexNet, VGG blocks and reduced VGG-11, and NiN blocks and model training.
-- Next starting point: Section 8.4 Multi-Branch Networks (GoogLeNet).
+- Chapter 8 is complete through Section 8.7.6, covering AlexNet, VGG, NiN, GoogLeNet, batch normalization, ResNet, ResNeXt, and DenseNet.
+- Section 8.8 Designing Convolution Network Architectures was intentionally skipped by the learner.
+- Chapter 8 Exercises were skipped by default.
+- Chapter 9 source text was supplied, preserved in full, and range-validated on 2026-08-06.
+- The preserved Chapter 9 range begins with the chapter introduction and ends after Section 9.7.4 Exercises.
+- The supplied extraction contains compressed spacing and formula-layout artifacts in parts of the later sections; preserve the source text and verify affected equations during tutoring.
+- Next starting point: Chapter 9 introduction, followed by Section 9.1 Working with Sequences.
 
 ## Teaching and notebook rules
 
@@ -125,6 +126,9 @@ Updated: 2026-08-03 KST
 - `source/ch08_sections_8_2_to_8_5.txt`
   - SHA-256: `096e5970f8324fba4bb15f487b922f1713a52a68156665708726e3c495fb94a4`
   - Covers Sections 8.2 through 8.5.7 and matches the corresponding full-source range except for terminal discussion-link punctuation.
+- `source/ch09_full.txt`
+  - SHA-256: `f871d222d89342350e83d98fd846653d643fdf1e72a079784c945a0d4a251632`
+  - LF-normalized preservation of the supplied Chapter 9 source; range begins at the chapter introduction and ends after Section 9.7.4 Exercises.
 
 ## Existing Chapter 4 notebooks
 
