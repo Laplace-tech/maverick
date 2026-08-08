@@ -26,8 +26,8 @@
 | 6 | Builders' Guide | Done |
 | 7 | Convolutional Neural Networks | Done |
 | **8** | **Modern Convolutional Neural Networks** | **Done · 8.8 skipped** |
-| **9** | **Recurrent Neural Networks** | **9.3 in progress** |
-| 10 | Modern Recurrent Neural Networks | Planned |
+| **9** | **Recurrent Neural Networks** | **Done** |
+| **10** | **Modern Recurrent Neural Networks** | **Next · source ready** |
 | 11 | Attention Mechanisms and Transformers | Planned |
 | 12 | Optimization Algorithms | Planned |
 | 13 | Computational Performance | Planned |

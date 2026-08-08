@@ -1,0 +1,1495 @@
+10
+Modern Recurrent Neural Networks
+The previous chapter introduced the key ideas behind recurrent neural networks (RNNs).
+However, just as with convolutional neural networks, there has been a tremendous amount
+of innovation in RNN architectures, culminating in several complex designs that have
+proven successful in practice. In particular, the most popular designs feature mechanisms
+for mitigating the notorious numerical instability faced by RNNs, as typified by vanishing
+and exploding gradients. Recall that in Chapter 9 we dealt with exploding gradients by ap
+plying a blunt gradient clipping heuristic. Despite the efficacy of this hack, it leaves open
+the problem of vanishing gradients.
+In this chapter, we introduce the key ideas behind the mostsuccessful RNNarchitecturesfor
+sequences, which stem from two papers. The first, Long Short-Term Memory (Hochreiter
+and Schmidhuber, 1997), introduces the memory cell, a unit of computation that replaces
+traditional nodes in the hidden layer of a network. With these memory cells, networks
+are able to overcome difficulties with training encountered by earlier recurrent networks.
+Intuitively, the memory cell avoids the vanishing gradient problem by keeping values in
+each memory cell’s internal state cascading along a recurrent edge with weight 1 across
+many successive time steps. A set of multiplicative gates help the network to determine not
+only the inputs to allow into the memory state, but when the content of the memory state
+should influence the model’s output.
+The second paper, Bidirectional Recurrent Neural Networks (Schuster and Paliwal, 1997),
+introduces an architecture in which information from both the future(subsequent time steps)
+and the past (preceding time steps) are used to determine the output at any point in the se
+quence. This is in contrast to previous networks, in which only past input can affect the
+output. Bidirectional RNNs have become a mainstay for sequence labeling tasks in natu
+ral language processing, among a myriad of other tasks. Fortunately, the two innovations
+are not mutuallyexclusive, andhavebeensuccessfullycombinedforphonemeclassification
+(Graves and Schmidhuber, 2005) and handwriting recognition (Graves et al., 2008).
+The first sections in this chapter will explain the LSTM architecture, alighter-weightversion
+called the gated recurrent unit (GRU), the key ideas behind bidirectional RNNs and a brief
+explanation of how RNN layers are stacked together to form deep RNNs. Subsequently,
+we will explore the application of RNNs in sequence-to-sequence tasks, introducing ma
+chine translation along with key ideas such as encoder–decoder architectures and beam
+search.
+369
+370
+Modern Recurrent Neural Networks
+10.1 Long Short-Term Memory (LSTM)
+Shortly after the first Elman-style RNNswere trainedusingbackpropagation(Elman,1990),
+the problems of learning long-term dependencies (owing to vanishing and exploding gra
+dients) became salient, with Bengio and Hochreiter discussing the problem (Bengio et al.,
+1994, Hochreiter et al., 2001). Hochreiter had articulated this problem as early as 1991 in
+his Master’s thesis, although the results were not widely known because the thesis was writ
+ten in German. Whilegradient clipping helps with exploding gradients, handling vanishing
+gradients appears to require a more elaborate solution. One of the first and most successful
+techniques for addressing vanishing gradients came in the form of the long short-termmem
+ory (LSTM) model due to Hochreiter and Schmidhuber (1997). LSTMs resemble standard
+recurrent neural networks but here each ordinary recurrent node is replaced by a memory
+cell. Each memory cell contains an internal state, i.e., a node with a self-connected re
+current edge of fixed weight 1, ensuring that the gradient can pass across many time steps
+without vanishing or exploding.
+The term “long short-term memory” comes from the following intuition. Simple recurrent
+neural networks have long-term memory in the form of weights. The weights change slowly
+during training, encoding general knowledge about the data. They also have short-term
+memory in the form of ephemeral activations, which pass from each node to successive
+nodes. The LSTM model introduces an intermediate type of storage via the memory cell.
+A memory cell is a composite unit, built from simpler nodes in a specific connectivity
+pattern, with the novel inclusion of multiplicative nodes.
+import torch
+from torch import nn
+from d2l import torch as d2l
+10.1.1 Gated Memory Cell
+Each memory cell is equipped with an internal state and a number of multiplicative gates
+that determine whether (i) a given input should impact the internal state (the input gate),
+(ii) the internal state should be flushed to 0 (the forget gate), and (iii) the internal state of a
+given neuron should be allowed to impact the cell’s output (the output gate).
+Gated Hidden State
+The key distinction between vanilla RNNs and LSTMs is that the latter support gating of
+the hidden state. This means that we have dedicated mechanisms for when a hidden state
+should be updated and also for when it should be reset. These mechanisms are learned and
+they address the concerns listed above. For instance, if the first token is of great importance
+we will learn not to update the hidden state after the first observation. Likewise, we will
+learn to skip irrelevant temporary observations. Last, we will learn to reset the latent state
+whenever needed. We discuss this in detail below.
+371
+Long Short-Term Memory (LSTM)
+Input Gate, Forget Gate, and Output Gate
+The data feeding into the LSTM gates are the input at the current time step and the hidden
+state of the previous time step, as illustrated in Fig. 10.1.1. Three fully connected layers
+with sigmoid activation functions compute the values of the input, forget, and output gates.
+As a result of the sigmoid activation, all values of the three gates are in the range of (0,1).
+Additionally, we require an input node, typically computed with a tanh activation func
+tion. Intuitively, the input gate determines how much of the input node’s value should be
+added to the current memory cell internal state. The forget gate determines whether to keep
+the current value of the memory or flush it. And the output gate determines whether the
+memory cell should influence the output at the current time step.
+Fig. 10.1.1 Computing the input gate, the forget gate, and the output gate in an LSTM model.
+Mathematically, suppose that there are ℎ hidden units, the batch size is 𝑛, and the number
+of inputs is 𝑑. Thus, the input is X𝑡 ∈ R𝑛× 𝑑 and the hidden state of the previous time step
+is H𝑡−1 ∈ R𝑛× ℎ. Correspondingly, the gates at time step 𝑡 are defined as follows: the input
+gate is I𝑡 ∈ R𝑛× ℎ, the forget gate is F𝑡 ∈ R𝑛× ℎ, and the output gate is O𝑡 ∈ R𝑛× ℎ. They
+are calculated as follows:
+I𝑡 = 𝜎(X𝑡Wxi +H𝑡−1Whi +bi),
+F𝑡 = 𝜎(X𝑡Wxf +H𝑡−1Whf +bf),
+O𝑡 = 𝜎(X𝑡Wxo +H𝑡−1Who +bo),
+(10.1.1)
+where Wxi,Wxf,Wxo ∈ R𝑑× ℎ and Whi,Whf,Who ∈ Rℎ× ℎ are weight parameters and
+bi, bf, bo ∈ R1× ℎ are bias parameters. Note that broadcasting (see Section 2.1.4) is trig
+gered during the summation. We use sigmoid functions (as introduced in Section 5.1) to
+map the input values to the interval (0,1).
+Input Node
+Next we design the memorycell. Sincewehavenotspecifiedtheaction of the various gates
+yet, we first introduce the input node ˜ C𝑡 ∈ R𝑛× ℎ. Its computation is similar to that of the
+three gates described above, but uses a tanh function with a value range for (−1,1) as the
+activation function. This leads to the following equation at time step 𝑡:
+˜
+C𝑡 = tanh(X𝑡Wxc +H𝑡−1Whc +bc),
+(10.1.2)
+372
+Modern Recurrent Neural Networks
+where Wxc ∈ R𝑑× ℎ and Whc ∈ Rℎ× ℎ are weight parameters and bc ∈ R1× ℎ is a bias
+parameter.
+Aquick illustration of the input node is shown in Fig. 10.1.2.
+Fig. 10.1.2 Computing the input node in an LSTM model.
+Memory Cell Internal State
+In LSTMs, the input gate I𝑡 governs how much we take new data into account via ˜ C𝑡 and
+the forget gate F𝑡 addresses how much of the old cell internal state C𝑡−1 ∈ R𝑛× ℎ we retain.
+Using the Hadamard (elementwise) product operator we arrive at the following update
+equation:
+C𝑡 = F𝑡 C𝑡−1+I𝑡 ˜ C𝑡.
+(10.1.3)
+If the forget gate is always 1 and the input gate is always 0, the memory cell internal state
+C𝑡−1 will remain constant forever, passing unchanged to each subsequent time step. How
+ever, input gates and forget gates give the model the flexibility of being able to learn when
+to keep this value unchanged and when to perturb it in response to subsequent inputs. In
+practice, this design alleviates the vanishing gradient problem, resulting in models that are
+much easier to train, especially when facing datasets with long sequence lengths.
+We thus arrive at the flow diagram in Fig. 10.1.3.
+Hidden State
+Last, we need to define how to compute the output of the memory cell, i.e., the hidden state
+H𝑡 ∈ R𝑛× ℎ, as seen by other layers. This is where the output gate comes into play. In
+LSTMs, we first apply tanh to the memory cell internal state and then apply another point
+wise multiplication, this time with the output gate. This ensures that the values of H𝑡 are
+always in the interval (−1,1):
+H𝑡 =O𝑡 tanh(C𝑡).
+(10.1.4)
+Whenever the output gate is close to 1, we allow the memory cell internal state to impact
+the subsequent layers uninhibited, whereas for output gate values close to 0, we prevent the
+373
+Long Short-Term Memory (LSTM)
+Fig. 10.1.3 Computing the memory cell internal state in an LSTM model.
+current memory from impacting other layers of the network at the current time step. Note
+that a memory cell can accrue information across many time steps without impacting the
+rest of the network (as long as the output gate takes values close to 0), and then suddenly
+impact the network at a subsequent time step as soon as the output gate flips from values
+close to 0 to values close to1. Fig.10.1.4hasagraphicalillustrationofthedataflow.
+Fig. 10.1.4 Computing the hidden state in an LSTM model.
+10.1.2 Implementation from Scratch
+Now let’s implement an LSTM from scratch. As same as the experiments in Section 9.5,
+we first load The Time Machine dataset.
+Initializing Model Parameters
+Next, we need to define and initialize the model parameters. As previously, the hyperpa
+rameter num_hiddens dictates the number of hidden units. We initialize weights following
+a Gaussian distribution with 0.01 standard deviation, and we set the biases to 0.
+class LSTMScratch(d2l.Module):
+def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+(continues on next page)
+374
+Modern Recurrent Neural Networks
+(continued from previous page)
+super().__init__()
+self.save_hyperparameters()
+init_weight = lambda *shape: nn.Parameter(torch.randn(*shape) * sigma)
+triple = lambda: (init_weight(num_inputs, num_hiddens),
+init_weight(num_hiddens, num_hiddens),
+nn.Parameter(torch.zeros(num_hiddens)))
+self.W_xi, self.W_hi, self.b_i = triple() # Input gate
+self.W_xf, self.W_hf, self.b_f = triple() # Forget gate
+self.W_xo, self.W_ho, self.b_o = triple() # Output gate
+self.W_xc, self.W_hc, self.b_c = triple() # Input node
+The actual model is defined as described above, consisting of three gates and an input node.
+Note that only the hidden state is passed to the output layer.
+@d2l.add_to_class(LSTMScratch)
+def forward(self, inputs, H_C=None):
+if H_C is None:
+# Initial state with shape: (batch_size, num_hiddens)
+H = torch.zeros((inputs.shape[1], self.num_hiddens),
+device=inputs.device)
+C = torch.zeros((inputs.shape[1], self.num_hiddens),
+device=inputs.device)
+else:
+H, C = H_C
+outputs = []
+for X in inputs:
+I = torch.sigmoid(torch.matmul(X, self.W_xi) +
+torch.matmul(H, self.W_hi) + self.b_i)
+F = torch.sigmoid(torch.matmul(X, self.W_xf) +
+torch.matmul(H, self.W_hf) + self.b_f)
+O = torch.sigmoid(torch.matmul(X, self.W_xo) +
+torch.matmul(H, self.W_ho) + self.b_o)
+C_tilde = torch.tanh(torch.matmul(X, self.W_xc) +
+torch.matmul(H, self.W_hc) + self.b_c)
+C = F * C + I * C_tilde
+H = O * torch.tanh(C)
+outputs.append(H)
+return outputs, (H, C)
+Training and Prediction
+Let’s train anLSTMmodelbyinstantiatingtheRNNLMScratchclassfromSection9.5.
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+lstm = LSTMScratch(num_inputs=len(data.vocab), num_hiddens=32)
+model = d2l.RNNLMScratch(lstm, vocab_size=len(data.vocab), lr=4)
+trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+10.1.3 Concise Implementation
+375
+Long Short-Term Memory (LSTM)
+Using high-level APIs, we can directly instantiate an LSTM model. This encapsulates
+all the configuration details that we made explicit above. The code is significantly faster
+as it uses compiled operators rather than Python for many details that we spelled out be
+fore.
+class LSTM(d2l.RNN):
+def __init__(self, num_inputs, num_hiddens):
+d2l.Module.__init__(self)
+self.save_hyperparameters()
+self.rnn = nn.LSTM(num_inputs, num_hiddens)
+def forward(self, inputs, H_C=None):
+return self.rnn(inputs, H_C)
+lstm = LSTM(num_inputs=len(data.vocab), num_hiddens=32)
+model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
+trainer.fit(model, data)
+model.predict('it has', 20, data.vocab, d2l.try_gpu())
+'it has a the time travelly'
+LSTMs are the prototypical latent variable autoregressive model with nontrivial state con
+trol. Many variants thereof have been proposed over the years, e.g., multiple layers, resid
+ual connections, different types of regularization. However, training LSTMs and other
+376
+Modern Recurrent Neural Networks
+145
+sequence models (such as GRUs) is quite costly because of the long range dependency of
+the sequence. Later we will encounter alternative models such as Transformers that can be
+used in some cases.
+10.1.4 Summary
+WhileLSTMswere published in1997,theyrosetogreatprominencewithsomevictoriesin
+prediction competitions in the mid-2000s, and became the dominant models for sequence
+learning from 2011 until the rise of Transformer models, starting in 2017. Even Tran
+formers owe some of their key ideas to architecture design innovations introduced by the
+LSTM.
+LSTMs have three types of gates: input gates, forget gates, and output gates that control the
+flow of information. The hidden layer output of LSTM includes the hidden state and the
+memory cell internal state. Only the hidden state is passed into the output layer while the
+memory cell internal state remains entirely internal. LSTMs can alleviate vanishing and
+exploding gradients.
+10.1.5 Exercises
+1. Adjust the hyperparameters and analyze their influence on running time, perplexity, and
+the output sequence.
+2. How would you need to change the model to generate proper words rather than just
+sequences of characters?
+3. Compare the computational cost for GRUs, LSTMs, and regular RNNs for a given hid
+den dimension. Pay special attention to the training and inference cost.
+4. Since the candidate memory cell ensures that the value range is between −1 and 1 by
+using the tanh function, why does the hidden state need to use the tanh function again
+to ensure that the output value range is between −1 and 1?
+5. Implement an LSTM model for time series prediction rather than character sequence
+prediction.
+Discussions145.
+10.2 Gated Recurrent Units (GRU)
+As RNNs and particularly the LSTM architecture (Section 10.1) rapidly gained popularity
+during the 2010s, a number of researchers began to experiment with simplified architec
+tures in hopes of retaining the key idea of incorporating an internal state and multiplicative
+gating mechanisms but with the aim of speeding up computation. The gated recurrent unit
+377
+Gated Recurrent Units (GRU)
+(GRU) (Cho et al., 2014) offered a streamlined version of the LSTM memory cell that of
+ten achieves comparable performance but with the advantage of being faster to compute
+(Chung et al., 2014).
+import torch
+from torch import nn
+from d2l import torch as d2l
+10.2.1 Reset Gate and Update Gate
+Here, the LSTM’s three gates are replaced by two: the reset gate and the update gate. As
+with LSTMs, these gates are given sigmoid activations, forcing their values to lie in the
+interval (0, 1). Intuitively, the reset gate controls how much of the previous state we might
+still want to remember. Likewise, an update gate would allow us to control how much of
+the new state is just a copy of the old one. Fig. 10.2.1 illustrates the inputs for both the reset
+and update gates in a GRU, given the input of the current time step and the hidden state
+of the previous time step. The outputs of the gates are given by two fully connected layers
+with a sigmoid activation function.
+Fig. 10.2.1 Computing the reset gate and the update gate in a GRU model.
+Mathematically, for a given time step 𝑡, suppose that the input is a minibatch X𝑡 ∈ R𝑛× 𝑑
+(number of examples = 𝑛; number of inputs = 𝑑) and the hidden state of the previous time
+step is H𝑡−1 ∈ R𝑛× ℎ (number of hidden units = ℎ). Then the reset gate R𝑡 ∈ R𝑛× ℎ and
+update gate Z𝑡 ∈ R𝑛× ℎ are computed as follows:
+R𝑡 = 𝜎(X𝑡Wxr +H𝑡−1Whr +br),
+Z𝑡 = 𝜎(X𝑡Wxz +H𝑡−1Whz +bz),
+(10.2.1)
+where Wxr,Wxz ∈ R𝑑× ℎ andWhr,Whz ∈ Rℎ× ℎ areweightparametersandbr,bz ∈ R1× ℎ
+are bias parameters.
+10.2.2 Candidate Hidden State
+378
+Modern Recurrent Neural Networks
+Next, weintegratetheresetgateR𝑡 withtheregularupdatingmechanismin(9.4.5), leading
+to the following candidate hidden state ˜ H𝑡 ∈ R𝑛× ℎ at time step 𝑡:
+˜
+H𝑡 = tanh(X𝑡Wxh + (R𝑡 H𝑡−1)Whh +bh),
+(10.2.2)
+whereWxh ∈ R𝑑× ℎ andWhh ∈ Rℎ× ℎ areweightparameters,bh ∈ R1× ℎ isthebias,andthe
+symbol is the Hadamard (elementwise) product operator. Here we use a tanh activation
+function.
+The result is a candidate, since we still need to incorporate the action of the update gate.
+Comparing with (9.4.5), the influence of the previous states can now be reduced with the
+elementwise multiplication of R𝑡 and H𝑡−1 in (10.2.2). Whenever the entries in the reset
+gate R𝑡 are close to 1, we recover a vanilla RNN such as that in (9.4.5). For all entries of
+the reset gate R𝑡 that are close to 0, the candidate hidden state is the result of an MLP with
+X𝑡 as input. Any pre-existing hidden state is thus reset to defaults.
+Fig. 10.2.2 illustrates the computational flow after applying the reset gate.
+Fig. 10.2.2 Computing the candidate hidden state in a GRU model.
+10.2.3 Hidden State
+Finally, we need to incorporate the effect of the update gate Z𝑡. This determines the extent
+to which the new hidden state H𝑡 ∈ R𝑛× ℎ matches the old state H𝑡−1 compared with how
+much it resembles the new candidate state ˜ H𝑡. The update gate Z𝑡 can be used for this
+purpose, simply by taking elementwise convex combinations of H𝑡−1 and ˜ H𝑡. This leads
+to the final update equation for the GRU:
+H𝑡 =Z𝑡 H𝑡−1+(1−Z𝑡) ˜ H𝑡.
+(10.2.3)
+Whenever the update gate Z𝑡 is close to 1, we simply retain the old state. In this case
+the information from X𝑡 is ignored, effectively skipping time step 𝑡 in the dependency
+chain. By contrast, whenever Z𝑡 is close to 0, the new latent state H𝑡 approaches the
+candidate latent state ˜
+H𝑡. Fig. 10.2.3 shows the computational flow after the update gate is
+in action.
+In summary, GRUs have the following two distinguishing features:
+379
+Gated Recurrent Units (GRU)
+Fig. 10.2.3 Computing the hidden state in a GRU model.
+• Reset gates help capture short-term dependencies in sequences.
+• Update gates help capture long-term dependencies in sequences.
+10.2.4 Implementation from Scratch
+To gain a better understanding of the GRU model, let’s implement it from scratch.
+Initializing Model Parameters
+The first step is to initialize the model parameters. We draw the weights from a Gaussian
+distribution with standard deviation to be sigma and set the bias to 0. The hyperparameter
+num_hiddens defines the number of hidden units. We instantiate all weights and biases
+relating to the update gate, the reset gate, and the candidate hidden state.
+class GRUScratch(d2l.Module):
+def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+super().__init__()
+self.save_hyperparameters()
+init_weight = lambda *shape: nn.Parameter(torch.randn(*shape) * sigma)
+triple = lambda: (init_weight(num_inputs, num_hiddens),
+init_weight(num_hiddens, num_hiddens),
+nn.Parameter(torch.zeros(num_hiddens)))
+self.W_xz, self.W_hz, self.b_z = triple() # Update gate
+self.W_xr, self.W_hr, self.b_r = triple() # Reset gate
+self.W_xh, self.W_hh, self.b_h = triple() # Candidate hidden state
+Defining the Model
+Nowwe are ready to define the GRU forward computation. Its structure is the same as that
+of the basic RNN cell, except that the update equations are more complex.
+@d2l.add_to_class(GRUScratch)
+def forward(self, inputs, H=None):
+(continues on next page)
+380
+Modern Recurrent Neural Networks
+(continued from previous page)
+if H is None:
+# Initial state with shape: (batch_size, num_hiddens)
+H = torch.zeros((inputs.shape[1], self.num_hiddens),
+device=inputs.device)
+outputs = []
+for X in inputs:
+Z = torch.sigmoid(torch.matmul(X, self.W_xz) +
+torch.matmul(H, self.W_hz) + self.b_z)
+R = torch.sigmoid(torch.matmul(X, self.W_xr) +
+torch.matmul(H, self.W_hr) + self.b_r)
+H_tilde = torch.tanh(torch.matmul(X, self.W_xh) +
+torch.matmul(R * H, self.W_hh) + self.b_h)
+H = Z * H + (1- Z) * H_tilde
+outputs.append(H)
+return outputs, H
+Training
+Training a language model on The Time Machine dataset works in exactly the same manner
+as in Section 9.5.
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+gru = GRUScratch(num_inputs=len(data.vocab), num_hiddens=32)
+model = d2l.RNNLMScratch(gru, vocab_size=len(data.vocab), lr=4)
+trainer = d2l.Trainer(max_epochs=50, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+10.2.5 Concise Implementation
+In high-level APIs, we can directly instantiate a GRU model. This encapsulates all the
+configuration detail that we made explicit above.
+class GRU(d2l.RNN):
+def __init__(self, num_inputs, num_hiddens):
+d2l.Module.__init__(self)
+self.save_hyperparameters()
+self.rnn = nn.GRU(num_inputs, num_hiddens)
+381
+Gated Recurrent Units (GRU)
+146
+Thecode is significantlyfaster in training as it uses compiled operators rather thanPython.
+gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
+model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
+trainer.fit(model, data)
+After training, we print out the perplexity on the training set and the predicted sequence
+following the provided prefix.
+model.predict('it has', 20, data.vocab, d2l.try_gpu())
+'it has so it and the time '
+10.2.6 Summary
+Compared with LSTMs, GRUs achieve similar performance but tend to be lighter com
+putationally. Generally, compared with simple RNNs, gated RNNS, just like LSTMs and
+GRUs,canbetter capture dependencies for sequences with large time step distances. GRUs
+contain basic RNNs as their extreme case whenever the reset gate is switched on. They can
+also skip subsequences by turning on the update gate.
+10.2.7 Exercises
+1. Assume that we only want to use the input at time step 𝑡 to predict the output at time
+step 𝑡 > 𝑡 . What are the best values for the reset and update gates for each time step?
+2. Adjust the hyperparameters and analyze their influence on running time, perplexity, and
+the output sequence.
+3. Compare runtime, perplexity, and the output strings for rnn.RNN and rnn.GRU imple
+mentations with each other.
+4. Whathappens if you implement only parts of a GRU, e.g., with only a reset gate or only
+an update gate?
+Discussions146.
+382
+Modern Recurrent Neural Networks
+10.3 Deep Recurrent Neural Networks
+Up until now, wehavefocusedondefiningnetworksconsisting of a sequence input, a single
+hidden RNN layer, and an output layer. Despite having just one hidden layer between the
+input at any time step and the correspondingoutput, there is a senseinwhichthesenetworks
+are deep. Inputs from the first time step can influence the outputs at the final time step
+𝑇 (often 100s or 1000s of steps later). These inputs pass through 𝑇 applications of the
+recurrent layer before reaching the final output. However, we often also wish to retain the
+ability to express complex relationships between the inputs at a given time step and the
+outputs at that same time step. Thus we often construct RNNs that are deep not only in the
+time direction but also in the input-to-output direction. This is precisely the notion of depth
+that we have already encountered in our development of MLPs and deep CNNs.
+The standard method for building this sort of deep RNN is strikingly simple: we stack
+the RNNs on top of each other. Given a sequence of length 𝑇, the first RNN produces a
+sequence of outputs, also of length 𝑇. These, in turn, constitute the inputs to the next RNN
+layer. In this short section, we illustrate this design pattern and present a simple example for
+how to code up suchstacked RNNs. Below, in Fig. 10.3.1, we illustrate a deep RNN with 𝐿
+hidden layers. Each hidden state operates on a sequential input and produces a sequential
+output. Moreover, any RNN cell (white box in Fig. 10.3.1) at each time step depends on
+both the same layer’s value at the previous time step and the previous layer’s value at the
+same time step.
+Fig. 10.3.1 Architecture of a deep RNN.
+Formally, suppose that we have a minibatch input X𝑡 ∈ R𝑛× 𝑑 (number of examples = 𝑛;
+number of inputs in each example = 𝑑) at time step 𝑡. At the same time step, let the hidden
+state of the 𝑙th hidden layer (𝑙 = 1, . . ., 𝐿) be H(𝑙)
+𝑡
+∈ R𝑛×ℎ (number of hidden units = ℎ)
+and the output layer variable be O𝑡 ∈ R𝑛× 𝑞 (number of outputs: 𝑞). Setting H(0)
+𝑡
+= X𝑡,
+the hidden state of the 𝑙th hidden layer that uses the activation function 𝜙𝑙 is calculated as
+follows:
+H(𝑙)
+𝑡
+= 𝜙𝑙(H(𝑙−1)
+𝑡
+W(𝑙)
+xh +H(𝑙)
+𝑡−1W(𝑙)
+hh +b(𝑙)
+h ),
+(10.3.1)
+383
+Deep Recurrent Neural Networks
+where the weights W(𝑙)
+xh ∈ Rℎ× ℎ and W(𝑙)
+hh ∈ Rℎ× ℎ,together with the bias b(𝑙)
+the model parameters of the 𝑙th hidden layer.
+h ∈R1× ℎ,are
+At the end, the calculation of the output layer is only based on the hidden state of the final
+𝐿th hidden layer:
+O𝑡 = H(𝐿)
+𝑡
+Whq +bq,
+(10.3.2)
+where the weight Whq ∈ Rℎ× 𝑞 and the bias bq ∈ R1× 𝑞 are the model parameters of the
+output layer.
+Just as with MLPs, the number of hidden layers 𝐿 and the number of hidden units ℎ are hy
+perparameters that we cantune. CommonRNNlayerwidths(ℎ)areintherange (64,2056),
+and common depths (𝐿) are in the range (1,8). In addition, we can easily get a deep-gated
+RNNby replacing the hidden state computation in (10.3.1) with that from an LSTM or a
+GRU.
+import torch
+from torch import nn
+from d2l import torch as d2l
+10.3.1 Implementation from Scratch
+To implement a multilayer RNN from scratch, we can treat each layer as an RNNScratch
+instance with its own learnable parameters.
+class StackedRNNScratch(d2l.Module):
+def __init__(self, num_inputs, num_hiddens, num_layers, sigma=0.01):
+super().__init__()
+self.save_hyperparameters()
+self.rnns = nn.Sequential(*[d2l.RNNScratch(
+num_inputs if i==0 else num_hiddens, num_hiddens, sigma)
+for i in range(num_layers)])
+The multilayer forwardcomputationsimplyperformsforwardcomputation layerby layer.
+@d2l.add_to_class(StackedRNNScratch)
+def forward(self, inputs, Hs=None):
+outputs = inputs
+if Hs is None: Hs = [None] * self.num_layers
+for i in range(self.num_layers):
+outputs, Hs[i] = self.rnns[i](outputs, Hs[i])
+outputs = torch.stack(outputs, 0)
+return outputs, Hs
+As an example, we train a deep GRU model on The Time Machine dataset (same as in
+Section 9.5). To keep things simple we set the number of layers to 2.
+384
+Modern Recurrent Neural Networks
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+rnn_block = StackedRNNScratch(num_inputs=len(data.vocab),
+num_hiddens=32, num_layers=2)
+model = d2l.RNNLMScratch(rnn_block, vocab_size=len(data.vocab), lr=2)
+trainer = d2l.Trainer(max_epochs=100, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+10.3.2 Concise Implementation
+Fortunately many of the logistical details required to implement multiple layers of an RNN
+are readily available in high-level APIs. Our concise implementation will use such built
+in functionalities. The code generalizes the one we used previously in Section 10.2, let
+ting us specify the number of layers explicitly rather than picking the default of only one
+layer.
+class GRU(d2l.RNN): #@save
+"""The multilayer GRU model."""
+def __init__(self, num_inputs, num_hiddens, num_layers, dropout=0):
+d2l.Module.__init__(self)
+self.save_hyperparameters()
+self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
+dropout=dropout)
+The architectural decisions such as choosing hyperparameters are very similar to those of
+Section 10.2. We pick the same number of inputs and outputs as we have distinct tokens,
+i.e., vocab_size. The number of hidden units is still 32. The only difference is that we now
+select a nontrivial number of hidden layers by specifying the value of num_layers.
+gru = GRU(num_inputs=len(data.vocab), num_hiddens=32, num_layers=2)
+model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
+trainer.fit(model, data)
+model.predict('it has', 20, data.vocab, d2l.try_gpu())
+'it has for and the time th'
+385
+Bidirectional Recurrent Neural Networks
+147
+10.3.3 Summary
+In deep RNNs, the hidden state information is passed to the next time step of the current
+layer and the current time step of the next layer. There exist many different flavors of
+deep RNNs, such as LSTMs, GRUs, or vanilla RNNs. Conveniently, these models are
+all available as parts of the high-level APIs of deep learning frameworks. Initialization of
+models requires care. Overall, deep RNNs require considerable amount of work (such as
+learning rate and clipping) to ensure proper convergence.
+10.3.4 Exercises
+1. Replace the GRU by an LSTM and compare the accuracy and training speed.
+2. Increase the training data to include multiple books. How low can you go on the per
+plexity scale?
+3. Would you want to combine sources of different authors when modeling text? Why is
+this a good idea? What could go wrong?
+Discussions147.
+10.4 Bidirectional Recurrent Neural Networks
+Sofar, ourworkingexampleofasequencelearningtaskhasbeenlanguagemodeling,where
+we aim to predict the next token given all previous tokens in a sequence. In this scenario,
+we wish only to condition upon the leftward context, and thus the unidirectional chaining of
+a standard RNN seems appropriate. However, there are many other sequence learning tasks
+contexts where it is perfectly fine to condition the prediction at every time step on both the
+leftward and the rightward context. Consider, for example, part of speech detection. Why
+shouldn’t we take the context in both directions into account when assessing the part of
+speech associated with a given word?
+Another common task—often useful as a pretraining exercise prior to fine-tuning a model
+on an actual task of interest—is to mask out random tokens in a text document and then
+386
+Modern Recurrent Neural Networks
+to train a sequence model to predict the values of the missing tokens. Note that depend
+ing on what comes after the blank, the likely value of the missing token changes dramati
+cally:
+• Iam___.
+• Iam___hungry.
+• Iam___hungry, and I can eat half a pig.
+In the first sentence “happy” seems to be a likely candidate. The words “not” and “very”
+seem plausible in the second sentence, but “not” seems incompatible with the third sen
+tences.
+Fortunately, a simple technique transforms any unidirectional RNN into a bidirectional
+RNN(Schuster and Paliwal, 1997). We simply implement two unidirectional RNN layers
+chained together in opposite directions and acting on the same input (Fig. 10.4.1). For
+the first RNN layer, the first input is x1 and the last input is x𝑇, but for the second RNN
+layer, the first input is x𝑇 and the last input is x1. To produce the output of this bidirectional
+RNN layer,wesimplyconcatenatetogetherthecorrespondingoutputsofthetwounderlying
+unidirectional RNN layers.
+Fig. 10.4.1 Architecture of a bidirectional RNN.
+→
+Formally for any time step 𝑡, we consider a minibatch input X𝑡 ∈ R𝑛× 𝑑 (number of exam
+ples = 𝑛; numberofinputs in each example= 𝑑)andletthehiddenlayer activation function
+be 𝜙. In the bidirectional architecture, the forward and backward hidden states for this time
+step are −
+H𝑡 ∈ R𝑛× ℎ and ←−
+H𝑡 ∈ R𝑛× ℎ, respectively, where ℎ is the number of hidden units.
+The forward and backward hidden state updates are as follows:
+−
+→
+H𝑡 = 𝜙(X𝑡W(𝑓)
+xh +−→
+←−
+H𝑡 = 𝜙(X𝑡W(𝑏)
+H𝑡−1W(𝑓)
+xh +←−
+hh +b(𝑓)
+h ),
+H𝑡+1W(𝑏)
+hh +b(𝑏)
+h ),
+where the weights W(𝑓)
+xh ∈ R𝑑× ℎ,W(𝑓)
+hh ∈ Rℎ× ℎ,W(𝑏)
+the biases b(𝑓)
+h
+∈ R1×ℎ and b(𝑏)
+h
+xh ∈ R𝑑× ℎ, and W(𝑏)
+∈ R1×ℎ are all the model parameters.
+Next, we concatenate the forward and backward hidden states −
+→
+H𝑡 and ←−
+(10.4.1)
+hh ∈ Rℎ× ℎ, and
+H𝑡 to obtain the
+hidden state H𝑡 ∈ R𝑛× 2ℎ for feeding into the output layer. In deep bidirectional RNNs with
+multiple hidden layers, such information is passed on as input to the next bidirectional layer.
+387
+Bidirectional Recurrent Neural Networks
+Last, the output layer computes the output O𝑡 ∈ R𝑛× 𝑞 (number of outputs = 𝑞):
+O𝑡 = H𝑡Whq +bq.
+(10.4.2)
+Here, the weight matrix Whq ∈ R2ℎ× 𝑞 and the bias bq ∈ R1× 𝑞 are the model parameters
+of the output layer. While technically, the two directions can have different numbers of
+hidden units, this design choice is seldom made in practice. We now demonstrate a simple
+implementation of a bidirectional RNN.
+import torch
+from torch import nn
+from d2l import torch as d2l
+10.4.1 Implementation from Scratch
+Toimplementa bidirectionalRNNfrom scratch,wecanincludetwounidirectionalRNNScratch
+instances with separate learnable parameters.
+class BiRNNScratch(d2l.Module):
+def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+super().__init__()
+self.save_hyperparameters()
+self.f_rnn = d2l.RNNScratch(num_inputs, num_hiddens, sigma)
+self.b_rnn = d2l.RNNScratch(num_inputs, num_hiddens, sigma)
+self.num_hiddens *= 2 # The output dimension will be doubled
+States of forward and backward RNNs are updated separately, while outputs of these two
+RNNs are concatenated.
+@d2l.add_to_class(BiRNNScratch)
+def forward(self, inputs, Hs=None):
+f_H, b_H = Hs if Hs is not None else (None, None)
+f_outputs, f_H = self.f_rnn(inputs, f_H)
+b_outputs, b_H = self.b_rnn(reversed(inputs), b_H)
+outputs = [torch.cat((f, b),-1) for f, b in zip(
+f_outputs, reversed(b_outputs))]
+return outputs, (f_H, b_H)
+10.4.2 Concise Implementation
+Using the high-level APIs, we can implement bidirectional RNNs more concisely. Here we
+take a GRU model as an example.
+class BiGRU(d2l.RNN):
+def __init__(self, num_inputs, num_hiddens):
+d2l.Module.__init__(self)
+self.save_hyperparameters()
+self.rnn = nn.GRU(num_inputs, num_hiddens, bidirectional=True)
+self.num_hiddens *= 2
+388
+Modern Recurrent Neural Networks
+148
+10.4.3 Summary
+In bidirectional RNNs, the hidden state for each time step is simultaneously determined
+by the data prior to and after the current time step. Bidirectional RNNs are mostly use
+ful for sequence encoding and the estimation of observations given bidirectional context.
+Bidirectional RNNs are very costly to train due to long gradient chains.
+10.4.4 Exercises
+1. If the different directions use a different number of hidden units, how will the shape of
+H𝑡 change?
+2. Design a bidirectional RNN with multiple hidden layers.
+3. Polysemy is common in natural languages. For example, the word “bank” has different
+meanings in contexts “i went to the bank to deposit cash” and “i went to the bank to sit
+down”. How can we design a neural network model such that given a context sequence
+and a word, a vector representation of the word in the correct context will be returned?
+What type of neural architectures is preferred for handling polysemy?
+Discussions148.
+10.5 Machine Translation and the Dataset
+Among the major breakthroughs that prompted widespread interest in modern RNNs was
+a major advance in the applied field of statistical machine translation. Here, the model is
+presented with a sentence in one language and must predict the corresponding sentence in
+another. Note that here the sentences may be of different lengths, and that corresponding
+words in the two sentences may not occur in the same order, owing to differences in the
+two language’s grammatical structure.
+Many problems have this flavor of mapping between two such “unaligned” sequences.
+Examples include mapping from dialog prompts to replies or from questions to answers.
+Broadly, such problems are called sequence-to-sequence (seq2seq) problems and they are
+our focus for both the remainder of this chapter and much of Chapter 11.
+In this section, we introduce the machine translation problem and an example dataset that
+we will use in the subsequent examples. For decades, statistical formulations of translation
+between languages had been popular (Brown et al., 1990, Brown et al., 1988), even before
+researchers got neural network approaches working (methods were often lumped together
+under the term neural machine translation).
+First we will need some new code to process our data. Unlike the language modeling that
+we saw in Section 9.3, here eachexampleconsists of two separate text sequences, one in the
+source language and another (the translation) in the target language. The following code
+snippets will show how to load the preprocessed data into minibatches for training.
+389
+Machine Translation and the Dataset
+149
+import os
+import torch
+from d2l import torch as d2l
+10.5.1 Downloading and Preprocessing the Dataset
+To begin, we download an English–French dataset that consists of bilingual sentence pairs
+from the Tatoeba Project 149 . Each line in the dataset is a tab-delimited pair consisting
+of an English text sequence (the source) and the translated French text sequence (the tar
+get). Note that each text sequence can be just one sentence, or a paragraph of multiple
+sentences.
+class MTFraEng(d2l.DataModule): #@save
+"""The English-French dataset."""
+def _download(self):
+d2l.extract(d2l.download(
+d2l.DATA_URL+'fra-eng.zip', self.root,
+'94646ad1522d915e7b0f9296181140edcf86a4f5'))
+with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
+return f.read()
+data = MTFraEng()
+raw_text = data._download()
+print(raw_text[:75])
+Downloading ../data/fra-eng.zip from http://d2l-data.s3-accelerate.amazonaws.
+↩→com/fra-eng.zip...
+Go. Va !
+Hi. Salut !
+Run!
+Cours !
+Run!
+Who?
+Wow!
+Courez !
+Qui ?
+Ça alors !
+After downloading the dataset, we proceed with several preprocessing steps for the raw text
+data. For instance, we replace non-breaking space with space, convert uppercase letters to
+lowercase ones, and insert space between words and punctuation marks.
+@d2l.add_to_class(MTFraEng) #@save
+def _preprocess(self, text):
+# Replace non-breaking space with space
+text = text.replace('\u202f', ' ').replace('\xa0', ' ')
+# Insert space between words and punctuation marks
+no_space = lambda char, prev_char: char in ',.!?' and prev_char != ' '
+out = [' ' + char if i > 0 and no_space(char, text[i- 1]) else char
+for i, char in enumerate(text.lower())]
+return ''.join(out)
+390
+Modern Recurrent Neural Networks
+text = data._preprocess(raw_text)
+print(text[:80])
+go .
+hi .
+run !
+run !
+who ?
+wow !
+va !
+salut !
+cours !
+courez !
+qui ?
+ça alors !
+10.5.2 Tokenization
+Unlike the character-level tokenization in Section 9.3, for machine translation we prefer
+word-level tokenization here (today’s state-of-the-art models use more complex tokeniza
+tion techniques). The following _tokenize method tokenizes the first max_examples text
+sequence pairs, where each token is either a word or a punctuation mark. We append the
+special “<eos>” token to the end of every sequence to indicate the end of the sequence.
+When a model is predicting by generating a sequence token after token, the generation of
+the “<eos>” token can suggest that the output sequence is complete. In the end, the method
+below returns two lists of token lists: src and tgt. Specifically, src[i] is a list of tokens
+from the 𝑖th text sequence in the source language (English here) and tgt[i] is that in the
+target language (French here).
+@d2l.add_to_class(MTFraEng) #@save
+def _tokenize(self, text, max_examples=None):
+src, tgt = [], []
+for i, line in enumerate(text.split('\n')):
+if max_examples and i > max_examples: break
+parts = line.split('\t')
+if len(parts) == 2:
+# Skip empty tokens
+src.append([t for t in f'{parts[0]} <eos>'.split(' ') if t])
+tgt.append([t for t in f'{parts[1]} <eos>'.split(' ') if t])
+return src, tgt
+src, tgt = data._tokenize(text)
+src[:6], tgt[:6]
+([['go', '.', '<eos>'],
+['hi', '.', '<eos>'],
+['run', '!', '<eos>'],
+['run', '!', '<eos>'],
+['who', '?', '<eos>'],
+['wow', '!', '<eos>']],
+[['va', '!', '<eos>'],
+['salut', '!', '<eos>'],
+['cours', '!', '<eos>'],
+['courez', '!', '<eos>'],
+(continues on next page)
+391
+Machine Translation and the Dataset
+(continued from previous page)
+['qui', '?', '<eos>'],
+['ça', 'alors', '!', '<eos>']])
+Let’s plot the histogram of the number of tokens per text sequence. In this simple English
+French dataset, most of the text sequences have fewer than 20 tokens.
+#@save
+def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
+"""Plot the histogram for list length pairs."""
+d2l.set_figsize()
+_, _, patches = d2l.plt.hist(
+[[len(l) for l in xlist], [len(l) for l in ylist]])
+d2l.plt.xlabel(xlabel)
+d2l.plt.ylabel(ylabel)
+for patch in patches[1].patches:
+patch.set_hatch('/')
+d2l.plt.legend(legend)
+show_list_len_pair_hist(['source', 'target'], '# tokens per sequence',
+'count', src, tgt);
+10.5.3 Loading Sequences of Fixed Length
+Recall that in language modeling each example sequence, either a segment of one sentence
+or a span over multiple sentences, had a fixed length. This was specified by the num_steps
+(number of time steps or tokens) argument from Section 9.3. In machine translation, each
+example is a pair of source and target text sequences, where the two text sequences may
+have different lengths.
+For computational efficiency, we can still process a minibatch of text sequences at one time
+bytruncation and padding. Supposethateverysequenceinthesameminibatchshouldhave
+the same length num_steps. If a text sequence has fewer than num_steps tokens, we will
+keep appending the special “<pad>” token to its end until its length reaches num_steps.
+Otherwise, we will truncate the text sequence by only taking its first num_steps tokens and
+discarding the remaining. In this way, every text sequence will have the same length to be
+loaded in minibatches of the same shape. Furthermore, we also record length of the source
+392
+Modern Recurrent Neural Networks
+sequence excluding padding tokens. This information will be needed by some models that
+we will cover later.
+Since the machine translation dataset consists of pairs of languages, we can build two vo
+cabularies for both the source language and the target language separately. With word-level
+tokenization, the vocabulary size will be significantly larger than that using character-level
+tokenization. To alleviate this, here we treat infrequent tokens that appear less than twice
+as the same unknown (“<unk>”) token. As we will explain later (Fig. 10.7.1), when train
+ing with target sequences, the decoder output (label tokens) can be the same decoder input
+(target tokens), shifted by one token; and the special beginning-of-sequence “<bos>” token
+will be used as the first input token for predicting the target sequence (Fig. 10.7.3).
+@d2l.add_to_class(MTFraEng) #@save
+def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
+super(MTFraEng, self).__init__()
+self.save_hyperparameters()
+self.arrays, self.src_vocab, self.tgt_vocab = self._build_arrays(
+self._download())
+@d2l.add_to_class(MTFraEng) #@save
+def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
+def _build_array(sentences, vocab, is_tgt=False):
+pad_or_trim = lambda seq, t: (
+seq[:t] if len(seq) > t else seq + ['<pad>'] * (t- len(seq)))
+sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
+if is_tgt:
+sentences = [['<bos>'] + s for s in sentences]
+if vocab is None:
+vocab = d2l.Vocab(sentences, min_freq=2)
+array = torch.tensor([vocab[s] for s in sentences])
+valid_len = (array != vocab['<pad>']).type(torch.int32).sum(1)
+return array, vocab, valid_len
+src, tgt = self._tokenize(self._preprocess(raw_text),
+self.num_train + self.num_val)
+src_array, src_vocab, src_valid_len = _build_array(src, src_vocab)
+tgt_array, tgt_vocab, _ = _build_array(tgt, tgt_vocab, True)
+return ((src_array, tgt_array[:,:-1], src_valid_len, tgt_array[:,1:]),
+src_vocab, tgt_vocab)
+10.5.4 Reading the Dataset
+Finally, we define the get_dataloader method to return the data iterator.
+@d2l.add_to_class(MTFraEng) #@save
+def get_dataloader(self, train):
+idx = slice(0, self.num_train) if train else slice(self.num_train, None)
+return self.get_tensorloader(self.arrays, train, idx)
+Let’s read the first minibatch from the English–French dataset.
+393
+Machine Translation and the Dataset
+data = MTFraEng(batch_size=3)
+src, tgt, src_valid_len, label = next(iter(data.train_dataloader()))
+print('source:', src.type(torch.int32))
+print('decoder input:', tgt.type(torch.int32))
+print('source len excluding pad:', src_valid_len.type(torch.int32))
+print('label:', label.type(torch.int32))
+source: tensor([[117, 182, 0, 3, 4, 4, 4, 4, 4],
+[ 62, 72, 2, 3, 4, 4, 4, 4, 4],
+[ 57, 124, 0, 3, 4, 4, 4, 4, 4]], dtype=torch.int32)
+decoder input: tensor([[ 3, 37, 100, 58, 160, 0, 4, 5, 5],
+[ 3, 6, 2, 4, 5, 5, 5, 5, 5],
+[ 3, 180, 0, 4, 5, 5, 5, 5, 5]], dtype=torch.int32)
+source len excluding pad: tensor([4, 4, 4], dtype=torch.int32)
+label: tensor([[ 37, 100, 58, 160, 0, 4, 5, 5, 5],
+[ 6, 2, 4, 5, 5, 5, 5, 5, 5],
+[180,
+0,
+4, 5, 5, 5, 5, 5, 5]], dtype=torch.int32)
+We show a pair of source and target sequences processed by the above _build_arrays
+method (in the string format).
+@d2l.add_to_class(MTFraEng) #@save
+def build(self, src_sentences, tgt_sentences):
+raw_text = '\n'.join([src + '\t' + tgt for src, tgt in zip(
+src_sentences, tgt_sentences)])
+arrays, _, _ = self._build_arrays(
+raw_text, self.src_vocab, self.tgt_vocab)
+return arrays
+src, tgt, _, _ = data.build(['hi .'], ['salut .'])
+print('source:', data.src_vocab.to_tokens(src[0].type(torch.int32)))
+print('target:', data.tgt_vocab.to_tokens(tgt[0].type(torch.int32)))
+source: ['hi', '.', '<eos>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '
+↩→<pad>']
+target: ['<bos>', 'salut', '.', '<eos>', '<pad>', '<pad>', '<pad>', '<pad>', '
+↩→<pad>']
+10.5.5 Summary
+In natural language processing, machine translation refers to the task of automatically map
+ping from a sequence representing a string of text in a source language to a string represent
+ing a plausible translation in a target language. Using word-level tokenization, the vocab
+ulary size will be significantly larger than that using character-level tokenization, but the
+sequence lengths will be much shorter. To mitigate the large vocabulary size, we can treat
+infrequent tokens as some “unknown” token. We can truncate and pad text sequences so
+that all of them will have the same length to be loaded in minibatches. Modern implemen
+394
+Modern Recurrent Neural Networks
+150
+tations often bucket sequences with similar lengths to avoid wasting excessive computation
+on padding.
+10.5.6 Exercises
+1. Try different values of the max_examples argument in the _tokenize method. How
+does this affect the vocabulary sizes of the source language and the target language?
+2. Text in some languages such as Chinese and Japanese does not have word boundary
+indicators (e.g., space). Is word-level tokenization still a good idea for such cases? Why
+or why not?
+Discussions150.
+10.6 The Encoder−Decoder Architecture
+In general sequence-to-sequence problems like machine translation (Section 10.5), inputs
+and outputs are of varying lengths that are unaligned. The standard approach to handling
+this sort of data is to design an encoder–decoder architecture (Fig. 10.6.1) consisting of
+two major components: an encoder that takes a variable-length sequence as input, and a
+decoder that acts as a conditional language model, taking in the encoded input and the
+leftwards context of the target sequence and predicting the subsequent token in the target
+sequence.
+Fig. 10.6.1 The encoder–decoder architecture.
+Let’s take machine translation from English to French as an example. Given an input
+sequence in English: “They”, “are”, “watching”, “.”, this encoder–decoder architecture
+first encodes the variable-length input into a state, then decodes the state to generate the
+translated sequence, token by token, as output: “Ils”, “regardent”, “.”. Since the encoder
+decoder architecture forms the basis of different sequence-to-sequence models in subse
+quent sections, this section will convert this architecture into an interface that will be im
+plemented later.
+from torch import nn
+from d2l import torch as d2l
+10.6.1 Encoder
+In the encoder interface, we just specify that the encoder takes variable-length sequences as
+input X. The implementation will be provided by any model that inherits this base Encoder
+class.
+395
+The Encoder−Decoder Architecture
+class Encoder(nn.Module): #@save
+"""The base encoder interface for the encoder--decoder architecture."""
+def __init__(self):
+super().__init__()
+# Later there can be additional arguments (e.g., length excluding padding)
+def forward(self, X, *args):
+raise NotImplementedError
+10.6.2 Decoder
+In the following decoder interface, we add an additional init_state method to convert the
+encoder output (enc_all_outputs) into the encoded state. Note that this step may require
+extra inputs, such as the valid length of the input, which was explained in Section 10.5.
+To generate a variable-length sequence token by token, every time the decoder may map
+an input (e.g., the generated token at the previous time step) and the encoded state into an
+output token at the current time step.
+class Decoder(nn.Module): #@save
+"""The base decoder interface for the encoder--decoder architecture."""
+def __init__(self):
+super().__init__()
+# Later there can be additional arguments (e.g., length excluding padding)
+def init_state(self, enc_all_outputs, *args):
+raise NotImplementedError
+def forward(self, X, state):
+raise NotImplementedError
+10.6.3 Putting the Encoder and Decoder Together
+In the forward propagation, the output of the encoder is used to produce the encoded state,
+and this state will be further used by the decoder as one of its input.
+class EncoderDecoder(d2l.Classifier): #@save
+"""The base class for the encoder--decoder architecture."""
+def __init__(self, encoder, decoder):
+super().__init__()
+self.encoder = encoder
+self.decoder = decoder
+def forward(self, enc_X, dec_X, *args):
+enc_all_outputs = self.encoder(enc_X, *args)
+dec_state = self.decoder.init_state(enc_all_outputs, *args)
+# Return decoder output only
+return self.decoder(dec_X, dec_state)[0]
+In the next section, we will see how to apply RNNs to design sequence-to-sequence models
+based on this encoder–decoder architecture.
+396
+Modern Recurrent Neural Networks
+151
+10.6.4 Summary
+Encoder-decoder architectures can handle inputs and outputs that both consist of variable
+length sequences and thus are suitable for sequence-to-sequence problems such as machine
+translation. The encoder takes a variable-length sequence as input and transforms it into a
+state with a fixed shape. The decoder maps the encoded state of a fixed shape to a variable
+length sequence.
+10.6.5 Exercises
+1. Suppose that we use neural networks to implement the encoder–decoder architecture.
+Do the encoder and the decoder have to be the same type of neural network?
+2. Besides machine translation, can you think of another application where the encoder
+decoder architecture can be applied?
+Discussions151.
+10.7 Sequence-to-Sequence Learning for Machine
+Translation
+In so-called sequence-to-sequence problems such as machine translation (as discussed in
+Section 10.5), whereinputsandoutputseachconsistofvariable-lengthunalignedsequences,
+we generally rely on encoder–decoder architectures (Section 10.6). In this section, we will
+demonstrate the application of an encoder–decoder architecture, where both the encoder
+and decoder are implemented as RNNs, to the task of machine translation (Cho et al.,
+2014, Sutskever et al., 2014).
+Here, the encoder RNN will take a variable-length sequence as input and transform it into
+a fixed-shape hidden state. Later, in Chapter 11, we will introduce attention mechanisms,
+which allow us to access encoded inputs without having to compress the entire input into a
+single fixed-length representation.
+Then to generate the output sequence, one token at a time, the decoder model, consisting
+of a separate RNN, will predict each successive target token given both the input sequence
+and the preceding tokens in the output. During training, the decoder will typically be con
+ditioned upon the preceding tokens in the official “ground truth” label. However, at test
+time, we will want to condition each output of the decoder on the tokens already predicted.
+Note that if we ignore the encoder, the decoder in a sequence-to-sequence architecture be
+haves just like a normal language model. Fig. 10.7.1 illustrates how to use two RNNs for
+sequence-to-sequence learning in machine translation.
+In Fig. 10.7.1, the special “<eos>” token marks the end of the sequence. Our model can
+stop making predictions once this token is generated. At the initial time step of the RNN
+decoder, there are two special design decisions to be aware of: First, we begin every input
+397
+Sequence-to-Sequence Learning for Machine Translation
+Fig. 10.7.1 Sequence-to-sequence learning with an RNN encoder and an RNN decoder.
+with a special beginning-of-sequence “<bos>” token. Second, we may feed the final hidden
+state of the encoder into the decoder at every single decoding time step (Cho et al., 2014).
+In some other designs, such as that of Sutskever et al. (2014), the final hidden state of the
+RNN encoder is used to initiate the hidden state of the decoder only at the first decoding
+step.
+import collections
+import math
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+10.7.1 Teacher Forcing
+While running the encoder on the input sequence is relatively straightforward, handling
+the input and output of the decoder requires more care. The most common approach is
+sometimes called teacher forcing. Here, the original target sequence (token labels) is fed
+into the decoder as input. More concretely, the special beginning-of-sequence token and
+the original target sequence, excluding the final token, are concatenated as input to the
+decoder, whilethedecoderoutput(labelsfortraining)istheoriginaltargetsequence, shifted
+by one token: “<bos>”, “Ils”, “regardent”, “.” → “Ils”, “regardent”, “.”, “<eos>” (Fig.
+10.7.1).
+Our implementation in Section 10.5.3 prepared training data for teacher forcing, where
+shifting tokens for self-supervised learning is similar to the training of language models in
+Section 9.3. An alternative approach is to feed the predicted token from the previous time
+step as the current input to the decoder.
+In the following, we explain the design depicted in Fig. 10.7.1 in greater detail. We will
+train this model for machine translation on the English–French dataset as introduced in
+Section 10.5.
+10.7.2 Encoder
+Recall that the encoder transforms an input sequence of variable length into a fixed-shape
+context variable c (see Fig. 10.7.1).
+Considera singlesequenceexample(batch size1). Supposetheinputsequenceis𝑥1, . . .,𝑥𝑇,
+such that 𝑥𝑡 is the 𝑡th token. At time step 𝑡, the RNN transforms the input feature vector x𝑡
+398
+Modern Recurrent Neural Networks
+for 𝑥𝑡 and the hidden state h𝑡−1 from the previous time step into the current hidden state h𝑡.
+We can use a function 𝑓 to express the transformation of the RNN’s recurrent layer:
+h𝑡 = 𝑓(x𝑡,h𝑡−1).
+(10.7.1)
+In general, the encoder transforms the hidden states at all time steps into a context variable
+through a customized function 𝑞:
+c = 𝑞(h1,...,h𝑇).
+(10.7.2)
+For example, in Fig. 10.7.1, the context variable is just the hidden state h𝑇 correspond
+ing to the encoder RNN’s representation after processing the final token of the input se
+quence.
+In this example, wehaveusedaunidirectionalRNNtodesigntheencoder, wherethehidden
+state only depends on the input subsequence at and before the time step of the hidden state.
+We can also construct encoders using bidirectional RNNs. In this case, a hidden state
+depends on the subsequence before and after the time step(including the input at the current
+time step), which encodes the information of the entire sequence.
+Now let’s implement the RNN encoder. Note that we use an embedding layer to obtain
+the feature vector for each token in the input sequence. The weight of an embedding
+layer is a matrix, where the number of rows corresponds to the size of the input vocab
+ulary (vocab_size) and number of columns corresponds to the feature vector’s dimension
+(embed_size). For anyinput token index𝑖, the embedding layer fetches the𝑖th row (starting
+from 0) of the weight matrix to return its feature vector. Here we implement the encoder
+with a multilayer GRU.
+def init_seq2seq(module): #@save
+"""Initialize weights for sequence-to-sequence learning."""
+if type(module) == nn.Linear:
+nn.init.xavier_uniform_(module.weight)
+if type(module) == nn.GRU:
+for param in module._flat_weights_names:
+if "weight" in param:
+nn.init.xavier_uniform_(module._parameters[param])
+class Seq2SeqEncoder(d2l.Encoder): #@save
+"""The RNN encoder for sequence-to-sequence learning."""
+def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+dropout=0):
+super().__init__()
+self.embedding = nn.Embedding(vocab_size, embed_size)
+self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
+self.apply(init_seq2seq)
+def forward(self, X, *args):
+# X shape: (batch_size, num_steps)
+embs = self.embedding(X.t().type(torch.int64))
+# embs shape: (num_steps, batch_size, embed_size)
+outputs, state = self.rnn(embs)
+(continues on next page)
+399
+Sequence-to-Sequence Learning for Machine Translation
+(continued from previous page)
+# outputs shape: (num_steps, batch_size, num_hiddens)
+# state shape: (num_layers, batch_size, num_hiddens)
+return outputs, state
+Let’s use a concrete example to illustrate the above encoder implementation. Below, we
+instantiate a two-layer GRU encoder whose number ofhidden units is16. Givenaminibatch
+of sequence inputs X (batch size = 4; number of time steps = 9), the hidden states of the
+final layer at all the time steps (enc_outputs returned by the encoder’s recurrent layers)
+are a tensor of shape (number of time steps, batch size, number of hidden units).
+vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
+batch_size, num_steps = 4, 9
+encoder = Seq2SeqEncoder(vocab_size, embed_size, num_hiddens, num_layers)
+X = torch.zeros((batch_size, num_steps))
+enc_outputs, enc_state = encoder(X)
+d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
+Since we are using a GRU here, the shape of the multilayer hidden states at the final time
+step is (number of hidden layers, batch size, number of hidden units).
+d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
+10.7.3 Decoder
+Givena target output sequence 𝑦1, 𝑦2, . . ., 𝑦𝑇 foreachtimestep𝑡 (weuse𝑡 todifferentiate
+from the input sequence time steps), the decoder assigns a predicted probability to each
+possible token occurring at step 𝑦𝑡+1 conditioned upon the previous tokens in the target
+𝑦1, . . . , 𝑦𝑡 and the context variable c, i.e., 𝑃(𝑦𝑡+1 | 𝑦1, . . ., 𝑦𝑡 ,c).
+To predict the subsequent token 𝑡 + 1 in the target sequence, the RNN decoder takes the
+previous step’s target token 𝑦𝑡 , the hidden RNN state from the previous time step s𝑡−1,
+and the context variable c as its input, and transforms them into the hidden state s𝑡 at the
+current time step. We can use a function 𝑔 to express the transformation of the decoder’s
+hidden layer:
+s𝑡 = 𝑔(𝑦𝑡−1,c,s𝑡−1).
+(10.7.3)
+After obtaining the hidden state of the decoder, we can use an output layer and the softmax
+operation to compute the predictive distribution 𝑝(𝑦𝑡+1 | 𝑦1, . . ., 𝑦𝑡 ,c) over the subse
+quent output token 𝑡 + 1.
+Following Fig. 10.7.1, when implementing the decoder as follows, we directly use the hid
+den state at the final time step of the encoder to initialize the hidden state of the decoder.
+This requires that the RNN encoder and the RNN decoder have the same number of lay
+ers and hidden units. To further incorporate the encoded input sequence information, the
+context variable is concatenated with the decoder input at all the time steps. To predict the
+400
+Modern Recurrent Neural Networks
+probability distribution of the output token, we use a fully connected layer to transform the
+hidden state at the final layer of the RNN decoder.
+class Seq2SeqDecoder(d2l.Decoder):
+"""The RNN decoder for sequence to sequence learning."""
+def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+dropout=0):
+super().__init__()
+self.embedding = nn.Embedding(vocab_size, embed_size)
+self.rnn = d2l.GRU(embed_size+num_hiddens, num_hiddens,
+num_layers, dropout)
+self.dense = nn.LazyLinear(vocab_size)
+self.apply(init_seq2seq)
+def init_state(self, enc_all_outputs, *args):
+return enc_all_outputs
+def forward(self, X, state):
+# X shape: (batch_size, num_steps)
+# embs shape: (num_steps, batch_size, embed_size)
+embs = self.embedding(X.t().type(torch.int32))
+enc_output, hidden_state = state
+# context shape: (batch_size, num_hiddens)
+context = enc_output[-1]
+# Broadcast context to (num_steps, batch_size, num_hiddens)
+context = context.repeat(embs.shape[0], 1, 1)
+# Concat at the feature dimension
+embs_and_context = torch.cat((embs, context),-1)
+outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
+outputs = self.dense(outputs).swapaxes(0, 1)
+# outputs shape: (batch_size, num_steps, vocab_size)
+# hidden_state shape: (num_layers, batch_size, num_hiddens)
+return outputs, [enc_output, hidden_state]
+To illustrate the implemented decoder, below we instantiate it with the same hyperparam
+eters from the aforementioned encoder. As we can see, the output shape of the decoder
+becomes (batch size, number of time steps, vocabulary size), where the final dimension of
+the tensor stores the predicted token distribution.
+decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
+state = decoder.init_state(encoder(X))
+dec_outputs, state = decoder(X, state)
+d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
+d2l.check_shape(state[1], (num_layers, batch_size, num_hiddens))
+The layers in the above RNNencoder–decodermodel aresummarized inFig.10.7.2.
+10.7.4 Encoder–Decoder for Sequence-to-Sequence Learning
+Putting it all together in code yields the following:
+401
+Sequence-to-Sequence Learning for Machine Translation
+Fig. 10.7.2 Layers in an RNN encoder–decoder model.
+class Seq2Seq(d2l.EncoderDecoder): #@save
+"""The RNN encoder--decoder for sequence to sequence learning."""
+def __init__(self, encoder, decoder, tgt_pad, lr):
+super().__init__(encoder, decoder)
+self.save_hyperparameters()
+def validation_step(self, batch):
+Y_hat = self(*batch[:-1])
+self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+def configure_optimizers(self):
+# Adam optimizer is used here
+return torch.optim.Adam(self.parameters(), lr=self.lr)
+10.7.5 Loss Function with Masking
+At each time step, the decoder predicts a probability distribution for the output tokens.
+As with language modeling, we can apply softmax to obtain the distribution and calculate
+the cross-entropy loss for optimization. Recall from Section 10.5 that the special padding
+tokens are appended to the end of sequences and so sequences of varying lengths can be
+efficiently loaded in minibatches of the same shape. However, prediction of padding tokens
+should be excluded from loss calculations. To this end, we can mask irrelevant entries
+with zero values so that multiplication of any irrelevant prediction with zero equates to
+zero.
+@d2l.add_to_class(Seq2Seq)
+def loss(self, Y_hat, Y):
+l = super(Seq2Seq, self).loss(Y_hat, Y, averaged=False)
+mask = (Y.reshape(-1) != self.tgt_pad).type(torch.float32)
+return (l * mask).sum() / mask.sum()
+10.7.6 Training
+Now we can create and train an RNN encoder–decoder model for sequence-to-sequence
+learning on the machine translation dataset.
+data = d2l.MTFraEng(batch_size=128)
+embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
+(continues on next page)
+402
+Modern Recurrent Neural Networks
+(continued from previous page)
+encoder = Seq2SeqEncoder(
+len(data.src_vocab), embed_size, num_hiddens, num_layers, dropout)
+decoder = Seq2SeqDecoder(
+len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
+model = Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
+lr=0.005)
+trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+10.7.7 Prediction
+To predict the output sequence at each step, the predicted token from the previous time step
+is fed into the decoder as an input. One simple strategy is to sample whichever token that
+has been assigned by the decoder the highest probability when predicting at each step. As
+in training, at the initial time step the beginning-of-sequence (“<bos>”) token is fed into the
+decoder. This prediction process is illustrated in Fig. 10.7.3. When the end-of-sequence
+(“<eos>”) token is predicted, the prediction of the output sequence is complete.
+Fig. 10.7.3 Predicting the output sequence token by token using an RNN encoder–decoder.
+In the next section, we will introduce more sophisticated strategies based on beam search
+(Section 10.8).
+@d2l.add_to_class(d2l.EncoderDecoder) #@save
+def predict_step(self, batch, device, num_steps,
+save_attention_weights=False):
+batch = [a.to(device) for a in batch]
+src, tgt, src_valid_len, _ = batch
+enc_all_outputs = self.encoder(src, src_valid_len)
+dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
+(continues on next page)
+403
+Sequence-to-Sequence Learning for Machine Translation
+(continued from previous page)
+outputs, attention_weights = [tgt[:, (0)].unsqueeze(1), ], []
+for _ in range(num_steps):
+Y, dec_state = self.decoder(outputs[-1], dec_state)
+outputs.append(Y.argmax(2))
+# Save attention weights (to be covered later)
+if save_attention_weights:
+attention_weights.append(self.decoder.attention_weights)
+return torch.cat(outputs[1:], 1), attention_weights
+10.7.8 Evaluation of Predicted Sequences
+We can evaluate a predicted sequence by comparing it with the target sequence (the ground
+truth). But what precisely is the appropriate measure for comparing similarity between two
+sequences?
+Bilingual Evaluation Understudy (BLEU), though originally proposed for evaluating ma
+chine translation results (Papineni et al., 2002), has been extensively used in measuring the
+quality of output sequences for different applications. In principle, for any 𝑛-gram (Section
+9.3.1) in the predicted sequence, BLEU evaluates whether this 𝑛-gram appears in the target
+sequence.
+Denote by 𝑝𝑛 the precision of an 𝑛-gram, defined as the ratio of the number of matched
+𝑛-grams in the predicted and target sequences to the number of 𝑛-grams in the predicted
+sequence. To explain, given a target sequence 𝐴, 𝐵, 𝐶, 𝐷, 𝐸, 𝐹, and a predicted sequence
+𝐴, 𝐵, 𝐵, 𝐶, 𝐷, we have 𝑝1 = 4/5, 𝑝2 = 3/4, 𝑝3 = 1/3, and 𝑝4 = 0. Now let lenlabel
+and lenpred be the numbers of tokens in the target sequence and the predicted sequence,
+respectively. Then, BLEU is defined as
+expmin 0,1− lenlabel
+lenpred
+where 𝑘 is the longest 𝑛-gram for matching.
+𝑘
+𝑛=1
+𝑝1/2𝑛
+𝑛 ,
+(10.7.4)
+Based on the definition of BLEU in (10.7.4), whenever the predicted sequence is the same
+as the target sequence, BLEU is 1. Moreover, since matching longer 𝑛-grams is more diffi
+cult, BLEUassigns a greater weight when a longer 𝑛-gram has high precision. Specifically,
+when 𝑝𝑛 is fixed, 𝑝1/2𝑛
+𝑛
+increases as 𝑛 grows (the original paper uses 𝑝1/𝑛
+𝑛 ). Furthermore,
+since predicting shorter sequences tends to yield a higher 𝑝𝑛 value, the coefficient before
+the multiplication term in (10.7.4) penalizes shorter predicted sequences. For example,
+when 𝑘 = 2, given the target sequence 𝐴, 𝐵, 𝐶, 𝐷, 𝐸, 𝐹 and the predicted sequence 𝐴, 𝐵,
+although 𝑝1 = 𝑝2 = 1, the penalty factor exp(1 − 6/2) ≈ 0.14 lowers the BLEU.
+We implement the BLEU measure as follows.
+def bleu(pred_seq, label_seq, k): #@save
+"""Compute the BLEU."""
+pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
+(continues on next page)
+404
+Modern Recurrent Neural Networks
+(continued from previous page)
+len_pred, len_label = len(pred_tokens), len(label_tokens)
+score = math.exp(min(0, 1- len_label / len_pred))
+for n in range(1, min(k, len_pred) + 1):
+num_matches, label_subs = 0, collections.defaultdict(int)
+for i in range(len_label- n + 1):
+label_subs[' '.join(label_tokens[i: i + n])] += 1
+for i in range(len_pred- n + 1):
+if label_subs[' '.join(pred_tokens[i: i + n])] > 0:
+num_matches += 1
+label_subs[' '.join(pred_tokens[i: i + n])]-= 1
+score *= math.pow(num_matches / (len_pred- n + 1), math.pow(0.5, n))
+return score
+In the end, we use the trained RNN encoder–decoder to translate a few English sentences
+into French and compute the BLEU of the results.
+engs = ['go .', 'i lost .', 'he\'s calm .', 'i\'m home .']
+fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+preds, _ = model.predict_step(
+data.build(engs, fras), d2l.try_gpu(), data.num_steps)
+for en, fr, p in zip(engs, fras, preds):
+translation = []
+for token in data.tgt_vocab.to_tokens(p):
+if token == '<eos>':
+break
+translation.append(token)
+print(f'{en} => {translation}, bleu,'
+f'{bleu(" ".join(translation), fr, k=2):.3f}')
+go . => ['va', '!'], bleu,1.000
+i lost . => ["j'ai", 'perdu', '.'], bleu,1.000
+he's calm . => ['elle', 'court', '.'], bleu,0.000
+i'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000
+10.7.9 Summary
+Following the design of the encoder–decoder architecture, we can use two RNNs to design
+a model for sequence-to-sequence learning. In encoder–decoder training, the teacher forc
+ing approach feeds original output sequences (in contrast to predictions) into the decoder.
+When implementing the encoder and the decoder, we can use multilayer RNNs. We can
+use masks to filter out irrelevant computations, such as when calculating the loss. For eval
+uating output sequences, BLEU is a popular measure that matches 𝑛-grams between the
+predicted sequence and the target sequence.
+10.7.10 Exercises
+1. Can you adjust the hyperparameters to improve the translation results?
+2. Rerun the experiment without using masks in the loss calculation. What results do you
+observe? Why?
+405
+Beam Search
+152
+3. If the encoder and the decoder differ in the number of layers or the number of hidden
+units, how can we initialize the hidden state of the decoder?
+4. In training, replace teacher forcing with feeding the prediction at the previous time step
+into the decoder. How does this influence the performance?
+5. Rerun the experiment by replacing GRU with LSTM.
+6. Are there any other ways to design the output layer of the decoder?
+Discussions152.
+10.8 Beam Search
+In Section 10.7, we introduced the encoder–decoder architecture, and the standard tech
+niques for training them end-to-end. However, when it came to test-time prediction, we
+mentioned only the greedy strategy, where we select at each time step the token given the
+highest predicted probability of coming next, until, at some time step, we find that we have
+predicted the special end-of-sequence “<eos>” token. In this section, we will begin by for
+malizing this greedy search strategy and identifying some problems that practitioners tend
+to runinto. Subsequently, wecomparethisstrategywithtwoalternatives: exhaustivesearch
+(illustrative but not practical) and beam search (the standard method in practice).
+Let’s begin by setting up our mathematical notation, borrowing conventions from Section
+10.7. At any time step 𝑡 , the decoder outputs predictions representing the probability of
+each token in the vocabulary coming next in the sequence (the likely value of 𝑦𝑡+1), con
+ditioned on the previous tokens 𝑦1,. . ., 𝑦𝑡 and the context variable c, produced by the
+encoder to represent the input sequence. To quantify computational cost, denote by Y the
+output vocabulary (including the special end-of-sequence token “<eos>”). Let’s also spec
+ify the maximum number of tokens of an output sequence as 𝑇 . Our goal is to search for
+an ideal output from all O(|Y|𝑇 ) possible output sequences. Note that this slightly over
+estimates the number of distinct outputs because there are no subsequent tokens once the
+“<eos>” token occurs. However, for our purposes, this number roughly captures the size
+of the search space.
+10.8.1 Greedy Search
+Consider the simple greedy search strategy from Section 10.7. Here, at any time step 𝑡 ,
+we simply select the token with the highest conditional probability from Y, i.e.,
+𝑦𝑡 = argmax
+𝑦∈Y
+𝑃(𝑦 | 𝑦1,..., 𝑦𝑡−1,c).
+(10.8.1)
+Once our model outputs“<eos>”(orwereachthemaximumlength𝑇)theoutputsequence
+is completed.
+406
+Modern Recurrent Neural Networks
+This strategy might look reasonable, and in fact it is not so bad! Considering how computa
+tionally undemanding it is, you’d be hard pressed to get more bang for your buck. However,
+if we put aside efficiency for a minute, it might seem more reasonable to search for the most
+likely sequence, not the sequence of (greedily selected) most likely tokens. It turns out that
+these two objects can be quite different. The most likely sequence is the one that maximizes
+the expression 𝑇
+𝑡=1 𝑃(𝑦𝑡 | 𝑦1,..., 𝑦𝑡−1,c). In our machine translation example, if the
+decoder truly recovered the probabilities of the underlying generative process, then this
+would give us the most likely translation. Unfortunately, there is no guarantee that greedy
+search will give us this sequence.
+Let’s illustrate it with an example. Suppose that there are four tokens “A”, “B”, “C”, and
+“<eos>” in the output dictionary. In Fig. 10.8.1, the four numbers under each time step rep
+resent the conditional probabilities of generating “A”, “B”, “C”, and “<eos>” respectively,
+at that time step.
+Fig. 10.8.1 At each time step, greedy search selects the token with the highest conditional probability.
+At each time step, greedy search selects the token with the highest conditional probability.
+Therefore, the output sequence “A”, “B”, “C”, and “<eos>” will be predicted (Fig. 10.8.1).
+The conditional probability of this output sequence is 0.5×0.4×0.4×0.6 = 0.048.
+Next, let’s look at another example in Fig. 10.8.2. Unlike in Fig. 10.8.1, at time step 2 we
+select the token “C”, which has the second highest conditional probability.
+Fig. 10.8.2 The four numbers under each time step represent the conditional probabilities of
+generating “A”, “B”, “C”, and “<eos>” at that time step. At time step 2, the token “C”,
+which has the second highest conditional probability, is selected.
+Since the output subsequences at time steps 1 and 2, on which time step 3 is based, have
+changed from “A” and “B” in Fig. 10.8.1 to “A” and “C” in Fig. 10.8.2, the conditional
+probability of each token at time step 3 has also changed in Fig. 10.8.2. Suppose that
+we choose the token “B” at time step 3. Now time step 4 is conditional on the output
+subsequence at the first three time steps “A”, “C”, and “B”, which has changed from “A”,
+“B”, and “C”inFig.10.8.1. Therefore, the conditional probability of generating each token
+at time step 4 in Fig. 10.8.2 is also different from that in Fig. 10.8.1. As a result, the
+conditional probability of the output sequence “A”, “C”, “B”, and “<eos>” in Fig. 10.8.2
+is 0.5 × 0.3 ×0.6×0.6 = 0.054, which is greater than that of greedy search in Fig. 10.8.1.
+407
+Beam Search
+In this example, the output sequence “A”, “B”, “C”, and “<eos>” obtained by the greedy
+search is not optimal.
+10.8.2 Exhaustive Search
+If the goal is to obtain the most likely sequence, we may consider using exhaustive search:
+enumerate all the possible output sequences with their conditional probabilities, and then
+output the one that scores the highest predicted probability.
+While this would certainly give us what we desire, it would come at a prohibitive com
+putational cost of O(|Y|𝑇 ), exponential in the sequence length and with an enormous
+base given by the vocabulary size. For example, when |Y| = 10000 and 𝑇 = 10, both
+small numbers when compared with ones in real applications, we will need to evaluate
+1000010 = 1040 sequences, which is already beyond the capabilities of any foreseeable
+computers. Ontheotherhand,thecomputationalcostofgreedysearchis O(|Y|𝑇): mirac
+ulously cheap but far from optimal. For example, when |Y| = 10000 and 𝑇 = 10, we only
+need to evaluate 10000 × 10 = 105 sequences.
+10.8.3 Beam Search
+You could view sequence decoding strategies as lying on a spectrum, with beam search
+striking a compromise between the efficiency of greedy search and the optimality of ex
+haustive search. The most straightforward version of beam search is characterized by a
+single hyperparameter, the beam size, 𝑘. Let’s explain this terminology. At time step 1,
+we select the 𝑘 tokens with the highest predicted probabilities. Each of them will be the
+first token of 𝑘 candidate output sequences, respectively. At each subsequent time step,
+based on the 𝑘 candidate output sequences at the previous time step, we continue to select
+𝑘 candidate output sequences with the highest predicted probabilities from 𝑘 |Y| possible
+choices.
+Fig. 10.8.3 The process of beam search (beam size = 2; maximum length of an output sequence = 3).
+The candidate output sequences are A, C, AB, CE, ABD, and CED.
+Fig. 10.8.3 demonstrates the process of beam search with an example. Suppose that the
+output vocabulary contains only five elements: Y = {𝐴, 𝐵,𝐶, 𝐷, 𝐸}, where one of them is
+408
+Modern Recurrent Neural Networks
+153
+“<eos>”. Let the beamsizebetwoandthemaximumlengthofanoutputsequencebethree.
+At time step 1, suppose that the tokens with the highest conditional probabilities 𝑃(𝑦1 | c)
+are 𝐴 and 𝐶. At time step 2, for all 𝑦2 ∈ Y, we compute
+𝑃(𝐴, 𝑦2 | c) = 𝑃(𝐴 | c)𝑃(𝑦2 | 𝐴,c),
+𝑃(𝐶, 𝑦2 | c) = 𝑃(𝐶 | c)𝑃(𝑦2 | 𝐶,c),
+(10.8.2)
+and pick the largest two among these ten values, say 𝑃(𝐴, 𝐵 | c) and 𝑃(𝐶, 𝐸 | c). Then at
+time step 3, for all 𝑦3 ∈ Y, we compute
+𝑃(𝐴, 𝐵, 𝑦3 | c) = 𝑃(𝐴,𝐵 | c)𝑃(𝑦3 | 𝐴,𝐵,c),
+𝑃(𝐶, 𝐸, 𝑦3 | c) = 𝑃(𝐶,𝐸 | c)𝑃(𝑦3 | 𝐶,𝐸,c),
+(10.8.3)
+and pick the largest two among these ten values, say 𝑃(𝐴, 𝐵, 𝐷 | c) and 𝑃(𝐶,𝐸, 𝐷 | c).
+As a result, we get six candidates output sequences: (i) 𝐴; (ii) 𝐶; (iii) 𝐴, 𝐵; (iv) 𝐶, 𝐸; (v)
+𝐴, 𝐵, 𝐷; and (vi) 𝐶, 𝐸, 𝐷.
+In the end, we obtain the set of final candidate output sequences based on these six se
+quences (e.g., discard portions including and after “<eos>”). Then we choose the output
+sequence which maximizes the following score:
+1
+𝐿𝛼 log 𝑃(𝑦1,..., 𝑦𝐿 | c) = 1
+𝐿𝛼
+𝐿
+𝑡=1
+log 𝑃(𝑦𝑡 | 𝑦1,..., 𝑦𝑡−1,c);
+(10.8.4)
+here 𝐿 is the length of the final candidate sequence and 𝛼 is usually set to 0.75. Since a
+longer sequence has more logarithmic terms in the summation of (10.8.4), the term 𝐿𝛼 in
+the denominator penalizes long sequences.
+The computational cost of beam search is O(𝑘 |Y|𝑇). This result is in between that of
+greedy search and that of exhaustive search. Greedy search can be treated as a special case
+of beam search arising when the beam size is set to 1.
+10.8.4 Summary
+Sequence searching strategies include greedy search, exhaustive search, and beam search.
+Beam search provides a trade-off between accuracy and computational cost via the flexible
+choice of the beam size.
+10.8.5 Exercises
+1. Can we treat exhaustive search as a special type of beam search? Why or why not?
+2. Apply beam search in the machine translation problem in Section 10.7. How does the
+beam size affect the translation results and the prediction speed?
+3. Weusedlanguage modeling for generating text following user-provided prefixes in Sec
+tion 9.5. Which kind of search strategy does it use? Can you improve it?
+Discussions153.

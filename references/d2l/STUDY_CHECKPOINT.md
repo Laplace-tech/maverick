@@ -1,6 +1,6 @@
 # D2L Study Checkpoint
 
-Updated: 2026-08-03 KST
+Updated: 2026-08-09 KST
 
 ## Current progress
 
@@ -83,7 +83,15 @@ Updated: 2026-08-03 KST
 - Chapter 9 source text was supplied, preserved in full, and range-validated on 2026-08-06.
 - The preserved Chapter 9 range begins with the chapter introduction and ends after Section 9.7.4 Exercises.
 - The supplied extraction contains compressed spacing and formula-layout artifacts in parts of the later sections; preserve the source text and verify affected equations during tutoring.
-- Next starting point: Chapter 9 introduction, followed by Section 9.1 Working with Sequences.
+- Chapter 9 notebooks were hard-reset by the learner on 2026-08-08. Do not reuse pre-reset notebook contents or Git history as implementation templates; rebuild from the preserved source and the learner's current fresh notebooks only.
+- Resolve relative dataset paths from the actual notebook working directory. For notebooks under `sec9_2_converting_raw_text_into_sequence_data`, the original D2L default root `../data` resolves to `src/ch09_recurrent_neural_networks/data`.
+- Chapter 9 is complete through Section 9.7.3 Summary.
+- Section 9.7.4 Exercises was skipped by default.
+- Chapter 10 Modern Recurrent Neural Networks source text was supplied, preserved in full, and range-validated on 2026-08-09.
+- The preserved Chapter 10 range begins with the chapter introduction and ends after Section 10.8.5 Exercises and its discussion marker.
+- Chapter 10 main sections and numbered subsections were checked against the official D2L 1.0.3 web pages; Sections 10.1 through 10.8 are present with no missing numbered subsection.
+- The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
+- Next starting point: Chapter 10 introduction, followed by Section 10.1 Long Short-Term Memory (LSTM).
 
 ## Teaching and notebook rules
 
@@ -129,6 +137,9 @@ Updated: 2026-08-03 KST
 - `source/ch09_full.txt`
   - SHA-256: `f871d222d89342350e83d98fd846653d643fdf1e72a079784c945a0d4a251632`
   - LF-normalized preservation of the supplied Chapter 9 source; range begins at the chapter introduction and ends after Section 9.7.4 Exercises.
+- `source/ch10_full.txt`
+  - SHA-256: `0eed239078b1f83f9036342bddab260a13fa19f37f2f136b8aacbd04890440a9`
+  - LF-normalized preservation of the supplied Chapter 10 source; range begins at the chapter introduction and ends after Section 10.8.5 Exercises and its discussion marker.
 
 ## Existing Chapter 4 notebooks
 
