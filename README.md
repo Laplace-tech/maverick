@@ -27,7 +27,7 @@
 | 7 | Convolutional Neural Networks | Done |
 | **8** | **Modern Convolutional Neural Networks** | **Done · 8.8 skipped** |
 | **9** | **Recurrent Neural Networks** | **Done** |
-| **10** | **Modern Recurrent Neural Networks** | **Next · source ready** |
+| **10** | **Modern Recurrent Neural Networks** | **10.1–10.4 done · Next 10.5** |
 | 11 | Attention Mechanisms and Transformers | Planned |
 | 12 | Optimization Algorithms | Planned |
 | 13 | Computational Performance | Planned |
@@ -51,7 +51,8 @@ src/
 ├── ch06_builders_guide/
 ├── ch07_convolutional_neural_networks/
 ├── ch08_modern_convolutional_neural_networks/
-└── ch09_recurrent_neural_networks/
+├── ch09_recurrent_neural_networks/
+└── ch10_modern_recurrent_neural_networks/
 ```
 
 각 chapter 아래에 section별 directory를 두고, 하나의 notebook에서 하나의 학습 흐름을 다룸.
