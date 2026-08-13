@@ -91,7 +91,12 @@ Updated: 2026-08-09 KST
 - The preserved Chapter 10 range begins with the chapter introduction and ends after Section 10.8.5 Exercises and its discussion marker.
 - Chapter 10 main sections and numbered subsections were checked against the official D2L 1.0.3 web pages; Sections 10.1 through 10.8 are present with no missing numbered subsection.
 - The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
-- Next starting point: Chapter 10 introduction, followed by Section 10.1 Long Short-Term Memory (LSTM).
+- Chapter 10 is complete through Section 10.8.4 Summary; Section 10.8.5 Exercises was skipped by default.
+- Chapter 11 Attention Mechanisms and Transformers source text was supplied, LF-normalized, preserved in full, and range-validated on 2026-08-13.
+- The preserved Chapter 11 range begins with the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
+- Chapter 11 main sections and numbered subsections were checked against the official D2L 1.0.3 table of contents; Sections 11.1 through 11.9 are present with no missing numbered subsection.
+- The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
+- Next starting point: Chapter 11 introduction, followed by Section 11.1 Queries, Keys, and Values.
 
 ## Teaching and notebook rules
 
@@ -140,6 +145,9 @@ Updated: 2026-08-09 KST
 - `source/ch10_full.txt`
   - SHA-256: `0eed239078b1f83f9036342bddab260a13fa19f37f2f136b8aacbd04890440a9`
   - LF-normalized preservation of the supplied Chapter 10 source; range begins at the chapter introduction and ends after Section 10.8.5 Exercises and its discussion marker.
+- `source/ch11_full.txt`
+  - SHA-256: `bb3680bf98c31cc034d74afc0fe02e16fccb233450fba30d97a5b5e4b7329787`
+  - LF-normalized, trailing-whitespace-cleaned preservation of the supplied Chapter 11 source; range begins at the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
 
 ## Existing Chapter 4 notebooks
 
