@@ -96,9 +96,11 @@ Updated: 2026-08-14 KST
 - The preserved Chapter 11 range begins with the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
 - Chapter 11 main sections and numbered subsections were checked against the official D2L 1.0.3 table of contents; Sections 11.1 through 11.9 are present with no missing numbered subsection.
 - The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
-- Chapter 11 is complete through Section 11.2.4 Summary; Section 11.2.5 Exercises was skipped by default.
-- Practice notebooks cover attention heatmaps, similarity kernels, Nadaraya–Watson attention pooling, kernel comparison, and kernel-width adaptation.
-- Next starting point: Section 11.3 Attention Scoring Functions.
+- Chapter 11 is complete through Section 11.3.5 Summary; Sections 11.2.5 and 11.3.6 Exercises were skipped by default.
+- Section 11.4 introduction and 11.4.1 Model are complete, including a focused review of the conventional fixed-context Seq2Seq encoder–decoder bottleneck.
+- Practice notebooks cover attention heatmaps, similarity kernels, Nadaraya–Watson attention pooling, kernel comparison, kernel-width adaptation, masked softmax, batch matrix multiplication, scaled dot product attention, and additive attention.
+- The conventional Seq2Seq decoder review was rewritten through its decoder tensor-shape validation in `src/ch10_modern_recurrent_neural_networks/sec10_7_sequence_to_sequence_learning_for_machine_translation/02_seq2seq_decoder.ipynb`.
+- Next starting point: Section 11.4.2 Defining the Decoder with Attention.
 
 ## Teaching and notebook rules
 
