@@ -1,6 +1,6 @@
 # D2L Study Checkpoint
 
-Updated: 2026-08-09 KST
+Updated: 2026-08-14 KST
 
 ## Current progress
 
@@ -96,7 +96,9 @@ Updated: 2026-08-09 KST
 - The preserved Chapter 11 range begins with the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
 - Chapter 11 main sections and numbered subsections were checked against the official D2L 1.0.3 table of contents; Sections 11.1 through 11.9 are present with no missing numbered subsection.
 - The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
-- Next starting point: Chapter 11 introduction, followed by Section 11.1 Queries, Keys, and Values.
+- Chapter 11 is complete through Section 11.2.4 Summary; Section 11.2.5 Exercises was skipped by default.
+- Practice notebooks cover attention heatmaps, similarity kernels, Nadaraya–Watson attention pooling, kernel comparison, and kernel-width adaptation.
+- Next starting point: Section 11.3 Attention Scoring Functions.
 
 ## Teaching and notebook rules
 

@@ -52,7 +52,8 @@ src/
 ├── ch07_convolutional_neural_networks/
 ├── ch08_modern_convolutional_neural_networks/
 ├── ch09_recurrent_neural_networks/
-└── ch10_modern_recurrent_neural_networks/
+├── ch10_modern_recurrent_neural_networks/
+└── ch11_attention_mechanisms_and_transformers/
 ```
 
 각 chapter 아래에 section별 directory를 두고, 하나의 notebook에서 하나의 학습 흐름을 다룸.
