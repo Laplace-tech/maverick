@@ -28,7 +28,7 @@
 | **8** | **Modern Convolutional Neural Networks** | **Done · 8.8 skipped** |
 | **9** | **Recurrent Neural Networks** | **Done** |
 | **10** | **Modern Recurrent Neural Networks** | **Done** |
-| **11** | **Attention Mechanisms and Transformers** | **11.1–11.5 done · Next 11.6** |
+| **11** | **Attention Mechanisms and Transformers** | **11.1–11.5 done · Reviewing 11.5 · Next 11.6** |
 | 12 | Optimization Algorithms | Planned |
 | 13 | Computational Performance | Planned |
 | 14 | Computer Vision | Planned |
