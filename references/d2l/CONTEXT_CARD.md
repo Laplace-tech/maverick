@@ -69,35 +69,34 @@ Completed curriculum:
 - Chapter 8: complete through Section 8.7; Section 8.8 intentionally skipped.
 - Chapter 9: complete.
 - Chapter 10: complete.
-- Chapter 11: Sections 11.1 through 11.5 complete.
+- Chapter 11: Sections 11.1 through 11.6 complete.
 
-Current mode is a Chapter 11 review before advancing:
+Current mode is normal new-material study:
 
-1. The learner has revisited the notebooks through Section 11.4.
-2. Review Section 11.5 Multi-Head Attention now.
-3. Run `스톱오버` validation.
-4. Resume new material at Section 11.6.
+1. The Chapter 11 review through Section 11.5 is complete.
+2. Section 11.6 Self-Attention and Positional Encoding is complete.
+3. Resume new material at Section 11.7 Transformer Architecture.
 
 Immediate next action:
 
-- Start the review at Section 11.5 Multi-Head Attention.
+- Start Section 11.7 Transformer Architecture.
 - Notebook:
-  `src/ch11_attention_mechanisms_and_transformers/sec11_5_multi_head_attention/01_multi_head_attention.ipynb`
-- Inspect its current cells first, preserve them, and begin the review from the
-  first core lesson cell after the import cell.
+  create the first Section 11.7 notebook only when the implementation boundary
+  is confirmed from `references/d2l/source/ch11_full.txt`.
+- Use the normal `원문해석 -> 핵심정리 -> 실습코드` routine.
 
-Prepared next-new-material state:
+Completed Section 11.6 state:
 
 - Notebook:
   `src/ch11_attention_mechanisms_and_transformers/sec11_6_self_attention_and_positional_encoding/01_self_attention.ipynb`
-- It currently contains only one verified import cell.
-- Do not begin Section 11.6 until the Chapter 11 review route above is complete
-  or the learner explicitly overrides the route.
+- Notebook:
+  `src/ch11_attention_mechanisms_and_transformers/sec11_6_self_attention_and_positional_encoding/02_positional_encoding.ipynb`
+- Both notebooks passed fresh execution during `스톱오버` on 2026-08-16.
 
 ## 5. Chapter 11 notebook inventory
 
 The following notebooks exist. At the time this card was updated, the notebooks
-through Section 11.5 had no saved exception output.
+through Section 11.6 had no saved exception output.
 
 ### Section 11.1
 
@@ -128,7 +127,7 @@ through Section 11.5 had no saved exception output.
 ### Section 11.6
 
 - `sec11_6_self_attention_and_positional_encoding/01_self_attention.ipynb`
-  contains only the import scaffold.
+- `sec11_6_self_attention_and_positional_encoding/02_positional_encoding.ipynb`
 
 All paths in this inventory are relative to:
 
@@ -370,10 +369,9 @@ is necessary, but the learner must also know what the computation means.
 - Do not create speculative directories or hidden Jupyter folders.
 - Do not commit or push unless explicitly requested through `커리원` or an
   equivalent direct instruction.
-- At the time this card was created, the worktree contained learner-owned
-  modifications in the Section 11.1 review notebook and the Section 11.6
-  import-scaffold notebook. Preserve them unless the learner requests
-  otherwise; always recheck live status because this snapshot can drift.
+- Never assume the worktree is clean from this card alone. Recheck live status
+  and preserve any learner-owned notebook changes unless the learner requests
+  otherwise.
 
 ## 14. Session startup checklist
 
@@ -391,7 +389,7 @@ A fresh Codex session should do the following silently and efficiently:
 For the present checkpoint, the recovered opening should be equivalent to:
 
 ```text
-Chapter 11 Sections 11.1–11.5 are complete. The earlier Attention notebooks
-have been revisited, and the immediate route is the Section 11.5 Multi-Head
-Attention review, 스톱오버 validation, then new material at Section 11.6.
+Chapter 11 Sections 11.1–11.6 are complete and validated. The immediate route
+is new material at Section 11.7 Transformer Architecture using the normal
+원문해석, 핵심정리, and 실습코드 workflow.
 ```

@@ -96,16 +96,16 @@ Updated: 2026-08-15 KST
 - The preserved Chapter 11 range begins with the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
 - Chapter 11 main sections and numbered subsections were checked against the official D2L 1.0.3 table of contents; Sections 11.1 through 11.9 are present with no missing numbered subsection.
 - The supplied extraction contains compressed spacing and formula-layout artifacts; preserve the source text and verify affected equations against the official page during tutoring.
-- Chapter 11 is complete through Section 11.5 Multi-Head Attention; Exercises were skipped by default.
+- Chapter 11 is complete through Section 11.6 Self-Attention and Positional Encoding; Exercises were skipped by default.
 - Section 11.4 Bahdanau Attention is complete, including the decoder, training flow, and a focused review of the conventional fixed-context Seq2Seq encoder–decoder bottleneck.
 - Section 11.5 Multi-Head Attention implementation is complete.
 - Practice notebooks cover attention heatmaps, similarity kernels, Nadaraya–Watson attention pooling, kernel comparison, kernel-width adaptation, masked softmax, batch matrix multiplication, scaled dot product attention, and additive attention.
 - The conventional Seq2Seq decoder review was rewritten through its decoder tensor-shape validation in `src/ch10_modern_recurrent_neural_networks/sec10_7_sequence_to_sequence_learning_for_machine_translation/02_seq2seq_decoder.ipynb`.
-- Current mode: review Chapter 11 using code, core explanation, Tensor Shape tracking, and Data Flow.
-- The learner has revisited the notebooks through Section 11.4; the immediate review target is Section 11.5 Multi-Head Attention.
-- Review route: Section 11.5, then `스톱오버`; resume new material at Section 11.6.
-- Section 11.6 notebook `src/ch11_attention_mechanisms_and_transformers/sec11_6_self_attention_and_positional_encoding/01_self_attention.ipynb` currently contains only its import scaffold.
-- Next starting point: Section 11.5 review in `src/ch11_attention_mechanisms_and_transformers/sec11_5_multi_head_attention/01_multi_head_attention.ipynb`.
+- Section 11.5 Multi-Head Attention review is complete.
+- Section 11.6 practice covers Self-Attention Data Flow, fixed Sine/Cosine Positional Encoding, Absolute Position visualization, and Relative Position Projection.
+- Section 11.5 and 11.6 notebooks passed fresh execution during `스톱오버` on 2026-08-16 with no saved exceptions.
+- Current mode: normal new-material study using full source translation, core explanation, Tensor Shape tracking, Data Flow, and learner-typed practice code.
+- Next starting point: Section 11.7 Transformer Architecture.
 
 ## Teaching and notebook rules
 
