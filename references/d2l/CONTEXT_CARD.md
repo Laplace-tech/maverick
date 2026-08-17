@@ -1,6 +1,6 @@
 # Maverick D2L Context Card
 
-Updated: 2026-08-15 KST
+Updated: 2026-08-17 KST
 
 This file is the durable operating card for continuing the Maverick D2L study
 in a fresh Codex conversation. The repository-root `AGENTS.md` points here so
@@ -69,20 +69,20 @@ Completed curriculum:
 - Chapter 8: complete through Section 8.7; Section 8.8 intentionally skipped.
 - Chapter 9: complete.
 - Chapter 10: complete.
-- Chapter 11: Sections 11.1 through 11.6 complete.
+- Chapter 11: complete through Section 11.9.6; Exercises skipped.
 
 Current mode is normal new-material study:
 
-1. The Chapter 11 review through Section 11.5 is complete.
-2. Section 11.6 Self-Attention and Positional Encoding is complete.
-3. Resume new material at Section 11.7 Transformer Architecture.
+1. Chapter 11 Attention Mechanisms and Transformers is complete.
+2. Sections 11.7 and 11.8 implementation notebooks passed fresh execution.
+3. Resume at Chapter 12 Optimization Algorithms after its source is supplied
+   and range-validated.
 
 Immediate next action:
 
-- Start Section 11.7 Transformer Architecture.
-- Notebook:
-  create the first Section 11.7 notebook only when the implementation boundary
-  is confirmed from `references/d2l/source/ch11_full.txt`.
+- Obtain and validate the Chapter 12 source before starting new material.
+- Do not extend Chapter 11 or invent an additional notebook for Section 11.9,
+  whose preserved source contains no implementation code.
 - Use the normal `원문해석 -> 핵심정리 -> 실습코드` routine.
 
 Completed Section 11.6 state:
@@ -128,6 +128,25 @@ through Section 11.6 had no saved exception output.
 
 - `sec11_6_self_attention_and_positional_encoding/01_self_attention.ipynb`
 - `sec11_6_self_attention_and_positional_encoding/02_positional_encoding.ipynb`
+
+### Section 11.7
+
+- `sec11_7_the_transformer_architecture/01_positionwise_feed_forward_network.ipynb`
+- `sec11_7_the_transformer_architecture/02_add_norm.ipynb`
+- `sec11_7_the_transformer_architecture/03_transformer_encoder.ipynb`
+- `sec11_7_the_transformer_architecture/04_transformer_decoder.ipynb`
+- `sec11_7_the_transformer_architecture/05_transformer_training_and_attention.ipynb`
+
+### Section 11.8
+
+- `sec11_8_transformers_for_vision/01_patch_embedding.ipynb`
+- `sec11_8_transformers_for_vision/02_vit_encoder.ipynb`
+- `sec11_8_transformers_for_vision/03_vision_transformer.ipynb`
+
+### Section 11.9
+
+- Conceptual section completed without a notebook because the preserved source
+  contains no implementation code.
 
 All paths in this inventory are relative to:
 
@@ -389,7 +408,8 @@ A fresh Codex session should do the following silently and efficiently:
 For the present checkpoint, the recovered opening should be equivalent to:
 
 ```text
-Chapter 11 Sections 11.1–11.6 are complete and validated. The immediate route
-is new material at Section 11.7 Transformer Architecture using the normal
-원문해석, 핵심정리, and 실습코드 workflow.
+Chapter 11 Sections 11.1–11.9 are complete; Exercises were skipped. Sections
+11.7 and 11.8 implementation notebooks are fresh-validated. The immediate
+route is Chapter 12 Optimization Algorithms after its source is supplied and
+range-validated, using the normal 원문해석, 핵심정리, and 실습코드 workflow.
 ```
