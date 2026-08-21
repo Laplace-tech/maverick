@@ -31,14 +31,9 @@ Tensor shape, data flow, training behavior를 실행하며 검증한 학습 기�
 
 ## About
 
-Maverick은 [Dive into Deep Learning](https://d2l.ai/)의 전개를 따라가며
-Classical Machine Learning부터 Transformer까지 구현한 개인 학습 repository다.
-
-- Source algorithm과 수식을 기준으로 PyTorch code를 재구성
-- From-scratch implementation과 framework-based implementation을 함께 비교
-- 주요 단계마다 Tensor shape와 device를 명시적으로 검증
-- 각 notebook을 독립적으로 실행할 수 있도록 section 단위로 구성
-- CPU/GPU execution과 training result를 notebook output으로 보존
+Maverick은 [Dive into Deep Learning](https://d2l.ai/)의 수식과 알고리즘을
+PyTorch로 직접 구현한 학습 기록이다. From-scratch와 framework implementation을
+비교하고, Tensor shape와 training result를 notebook에 검증·보존한다.
 
 ## Selected implementations
 
