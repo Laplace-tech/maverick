@@ -6,66 +6,93 @@
   />
 </p>
 
-<div align="center">
+<table>
+  <tr>
+    <td width="230" align="center">
+      <a href="https://d2l.ai/">
+        <img
+          src="./assets/d2l-cover.jpg"
+          width="190"
+          alt="Dive into Deep Learning book cover"
+        />
+      </a>
+    </td>
+    <td valign="middle">
+      <h2>Dive into Deep Learning</h2>
+      <p><strong>Source-faithful PyTorch Practice</strong></p>
+      <p>
+        교재의 수식과 알고리즘을 PyTorch notebook으로 직접 구현하고,<br />
+        Tensor shape, data flow, training behavior를 실행하며 검증한 학습 기록.
+      </p>
+    </td>
+  </tr>
+</table>
 
-<a href="https://d2l.ai/">
-  <img
-    src="./assets/d2l-cover.jpg"
-    width="250"
-    alt="Dive into Deep Learning book cover"
-  />
-</a>
+<br />
 
-### Dive into Deep Learning · Source-faithful PyTorch Practice
+---
 
-교재의 수식과 알고리즘을 PyTorch notebook으로 직접 구현하고,
-Tensor shape, data flow, training behavior를 실행하며 검증한 학습 기록.
+## Selected Implementations
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)
-![Notebooks](https://img.shields.io/badge/Notebooks-159-087E8B)
-![Progress](https://img.shields.io/badge/Chapters_1--11-Done-7B2CBF)
+### Foundations
 
-</div>
+| Representative Notebook | Core Concept |
+|---|---|
+| [Automatic Differentiation](src/ch02_preliminaries/sec2_5_automatic_differentiation/01_a_simple_function.ipynb) | Computation graph와 gradient propagation |
+| [Linear Regression](src/ch03_linear_neural_networks_for_regression/sec3_5_concise_implementation_of_linear_regression/01_concise_linear_regression.ipynb) | Model, loss, optimizer, training loop |
+| [Softmax & Cross-Entropy](src/ch04_linear_neural_networks_for_classification/sec4_5_concise_softmax_regression/02_softmax_revisited.ipynb) | Logit, probability, numerically stable loss computation |
+| [MLP from Scratch](src/ch05_multilayer_perceptrons/sec5_2_implementation_of_multilayer_perceptrons/01_mlp_from_scratch.ipynb) | Hidden Layer와 nonlinear representation |
 
-## About
+### Generalization & Model Selection
 
-[Dive into Deep Learning](https://d2l.ai/)의 수식과 알고리즘을 재구성한
-PyTorch 학습 기록. From-scratch와 framework implementation 비교.
-Tensor shape와 training result의 notebook 검증·보존.
+| Representative Notebook | Core Concept |
+|---|---|
+| [Dropout from Scratch](src/ch05_multilayer_perceptrons/sec5_6_dropout/01_dropout_from_scratch.ipynb) | Stochastic regularization과 training/inference behavior |
+| [K-Fold Cross-Validation](src/ch05_multilayer_perceptrons/sec5_7_predicting_house_prices_on_kaggle/01_kaggle_house_price_prediction.ipynb) | Validation strategy와 model selection |
 
-## Selected implementations
+### Core Neural Architectures (CNNs & RNNs)
 
-| Topic | Notebook | Focus |
-|---|---|---|
-| Automatic Differentiation | [A Simple Function](src/ch02_preliminaries/sec2_5_automatic_differentiation/01_a_simple_function.ipynb) | Computation graph와 gradient |
-| Linear Regression | [Concise Linear Regression](src/ch03_linear_neural_networks_for_regression/sec3_5_concise_implementation_of_linear_regression/01_concise_linear_regression.ipynb) | Model, loss, optimizer, training loop |
-| Softmax & Cross-Entropy | [Softmax Revisited](src/ch04_linear_neural_networks_for_classification/sec4_5_concise_softmax_regression/02_softmax_revisited.ipynb) | Stable probability와 loss computation |
-| Multilayer Perceptron | [MLP from Scratch](src/ch05_multilayer_perceptrons/sec5_2_implementation_of_multilayer_perceptrons/01_mlp_from_scratch.ipynb) | Hidden Layer와 nonlinear activation |
-| Regularization | [Dropout from Scratch](src/ch05_multilayer_perceptrons/sec5_6_dropout/01_dropout_from_scratch.ipynb) | Training과 inference behavior |
-| Convolutional Network | [LeNet](src/ch07_convolutional_neural_networks/sec7_6_lenet/01_lenet_architecture.ipynb) | CNN architecture와 feature hierarchy |
-| Residual Learning | [ResNet](src/ch08_modern_convolutional_neural_networks/sec8_6_residual_networks_resnet_and_resnext/02_resnet_model.ipynb) | Residual Block과 deep network training |
-| Recurrent Network | [Character-Level RNN](src/ch09_recurrent_neural_networks/sec9_5_recurrent_neural_network_implementation_from_scratch/04_training.ipynb) | Sequence modeling과 generation |
-| Transformer | [Training and Attention](src/ch11_attention_mechanisms_and_transformers/sec11_7_the_transformer_architecture/05_transformer_training_and_attention.ipynb) | Encoder–Decoder, causal mask, attention map |
-| Vision Transformer | [Vision Transformer](src/ch11_attention_mechanisms_and_transformers/sec11_8_transformers_for_vision/03_vision_transformer.ipynb) | Patch Embedding, ViT Block, image classification |
+| Representative Notebook | Core Concept |
+|---|---|
+| [LeNet](src/ch07_convolutional_neural_networks/sec7_6_lenet/01_lenet_architecture.ipynb) | Convolution, pooling, hierarchical feature extraction |
+| [ResNet](src/ch08_modern_convolutional_neural_networks/sec8_6_residual_networks_resnet_and_resnext/02_resnet_model.ipynb) | Residual connection과 deep network optimization |
+| [Elman RNN from Scratch](src/ch09_recurrent_neural_networks/sec9_5_recurrent_neural_network_implementation_from_scratch/01_rnn_model.ipynb) | Recurrent state와 sequential computation |
+| [LSTM from Scratch](src/ch10_modern_recurrent_neural_networks/sec10_1_long_short_term_memory_lstm/01_lstm_from_scratch.ipynb) | Gating mechanism과 long-term dependency |
 
-## Voyage log
+### Attention & Transformers
+
+| Representative Notebook | Core Concept |
+|---|---|
+| [Sequence-to-Sequence Translation](src/ch10_modern_recurrent_neural_networks/sec10_7_sequence_to_sequence_learning_for_machine_translation/03_seq2seq_training_and_prediction.ipynb) | Encoder–Decoder와 autoregressive decoding |
+| [Multi-Head Attention from Scratch](src/ch11_attention_mechanisms_and_transformers/sec11_5_multi_head_attention/01_multi_head_attention.ipynb) | Query, Key, Value와 parallel attention heads |
+| [Transformer Training & Attention](src/ch11_attention_mechanisms_and_transformers/sec11_7_the_transformer_architecture/05_transformer_training_and_attention.ipynb) | Self-Attention, causal mask, Encoder–Decoder |
+| [Vision Transformer](src/ch11_attention_mechanisms_and_transformers/sec11_8_transformers_for_vision/03_vision_transformer.ipynb) | Patch Embedding, ViT Block, image classification |
+
+---
+
+## Voyage Log
+
+### Completed Route
 
 | Chapter | Topic | Progress |
 |:---:|---|:---:|
-| 1 | Introduction | **Done** |
-| 2 | Preliminaries | **Done** |
-| 3 | Linear Neural Networks for Regression | **Done** |
-| 4 | Linear Neural Networks for Classification | **Done** |
-| 5 | Multilayer Perceptrons | **Done** |
-| 6 | Builders' Guide | **Done** |
-| 7 | Convolutional Neural Networks | **Done** |
-| 8 | Modern Convolutional Neural Networks | **Done** |
-| 9 | Recurrent Neural Networks | **Done** |
-| 10 | Modern Recurrent Neural Networks | **Done** |
-| 11 | Attention Mechanisms and Transformers | **Done** |
-| **12** | **Optimization Algorithms** | **Next** |
+| 1 | Introduction | ✅ Done |
+| 2 | Preliminaries | ✅ Done |
+| 3 | Linear Neural Networks for Regression | ✅ Done |
+| 4 | Linear Neural Networks for Classification | ✅ Done |
+| 5 | Multilayer Perceptrons | ✅ Done |
+| 6 | Builders' Guide | ✅ Done |
+| 7 | Convolutional Neural Networks | ✅ Done |
+| 8 | Modern Convolutional Neural Networks | ✅ Done |
+| 9 | Recurrent Neural Networks | ✅ Done |
+| 10 | Modern Recurrent Neural Networks | ✅ Done |
+| 11 | Attention Mechanisms and Transformers | ✅ Done |
+
+### Forward Route
+
+| Chapter | Topic | Progress |
+|:---:|---|:---:|
+| **12** | **Optimization Algorithms** | **▶ Next** |
 | 13 | Computational Performance | Planned |
 | 14 | Computer Vision | Planned |
 | 15 | Natural Language Processing: Pretraining | Planned |
@@ -76,7 +103,9 @@ Tensor shape와 training result의 notebook 검증·보존.
 | 20 | Generative Adversarial Networks | Optional |
 | 21 | Recommender Systems | Not planned |
 
-## Repository map
+---
+
+## Repository Map
 
 ```text
 src/
@@ -92,15 +121,17 @@ src/
 └── ch11_attention_mechanisms_and_transformers/      21 notebooks
 ```
 
-Chapter별 section directory. Notebook별 독립적인 학습 흐름.
+## Run Locally
 
-## Run locally
+### 1. Clone and open
 
 ```bash
 git clone https://github.com/Laplace-tech/maverick.git
 cd maverick
 code .
 ```
+
+### 2. Select the notebook kernel
 
 VS Code interpreter와 kernel:
 
@@ -109,6 +140,8 @@ Interpreter: .venv/bin/python
 Kernel:      Python (maverick)
 ```
 
+### 3. Activate in the terminal
+
 Terminal에서 environment를 직접 사용할 때:
 
 ```bash
@@ -116,6 +149,16 @@ source .venv/bin/activate
 python
 ```
 
+<br />
+
 <p align="center">
   <sub>Study archive based on <a href="https://d2l.ai/">Dive into Deep Learning</a>.</sub>
+</p>
+
+<p align="center">
+  <img
+    src="https://capsule-render.vercel.app/api?type=waving&color=0:FFB703,18:FF4D8D,43:7B2CBF,67:087E8B,82:09203F,100:050816&height=120&section=footer"
+    width="100%"
+    alt="Maverick project footer"
+  />
 </p>
