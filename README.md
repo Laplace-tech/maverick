@@ -31,9 +31,9 @@ Tensor shape, data flow, training behavior를 실행하며 검증한 학습 기�
 
 ## About
 
-Maverick은 [Dive into Deep Learning](https://d2l.ai/)의 수식과 알고리즘을
-PyTorch로 직접 구현한 학습 기록이다. From-scratch와 framework implementation을
-비교하고, Tensor shape와 training result를 notebook에 검증·보존한다.
+[Dive into Deep Learning](https://d2l.ai/)의 수식과 알고리즘을 재구성한
+PyTorch 학습 기록. From-scratch와 framework implementation 비교.
+Tensor shape와 training result의 notebook 검증·보존.
 
 ## Selected implementations
 
@@ -92,8 +92,7 @@ src/
 └── ch11_attention_mechanisms_and_transformers/      21 notebooks
 ```
 
-각 chapter 아래에 section별 directory를 두고, 하나의 notebook에서 하나의
-학습 흐름을 다룬다.
+Chapter별 section directory. Notebook별 독립적인 학습 흐름.
 
 ## Run locally
 
@@ -103,7 +102,7 @@ cd maverick
 code .
 ```
 
-VS Code에서 다음 interpreter와 kernel을 선택한다.
+VS Code interpreter와 kernel:
 
 ```text
 Interpreter: .venv/bin/python
