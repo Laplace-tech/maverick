@@ -36,7 +36,7 @@
 
 ### Foundations
 
-| Representative Notebook | Core Concept |
+| Representative Notebook | Main Concept |
 |---|---|
 | [Automatic Differentiation](src/ch02_preliminaries/sec2_5_automatic_differentiation/01_a_simple_function.ipynb) | Computation graph와 gradient propagation |
 | [Linear Regression](src/ch03_linear_neural_networks_for_regression/sec3_5_concise_implementation_of_linear_regression/01_concise_linear_regression.ipynb) | Model, loss, optimizer, training loop |
@@ -45,14 +45,14 @@
 
 ### Generalization & Model Selection
 
-| Representative Notebook | Core Concept |
+| Representative Notebook | Main Concept |
 |---|---|
 | [Dropout from Scratch](src/ch05_multilayer_perceptrons/sec5_6_dropout/01_dropout_from_scratch.ipynb) | Stochastic regularization과 training/inference behavior |
 | [K-Fold Cross-Validation](src/ch05_multilayer_perceptrons/sec5_7_predicting_house_prices_on_kaggle/01_kaggle_house_price_prediction.ipynb) | Validation strategy와 model selection |
 
 ### Core Neural Architectures (CNNs & RNNs)
 
-| Representative Notebook | Core Concept |
+| Representative Notebook | Main Concept |
 |---|---|
 | [LeNet](src/ch07_convolutional_neural_networks/sec7_6_lenet/01_lenet_architecture.ipynb) | Convolution, pooling, hierarchical feature extraction |
 | [ResNet](src/ch08_modern_convolutional_neural_networks/sec8_6_residual_networks_resnet_and_resnext/02_resnet_model.ipynb) | Residual connection과 deep network optimization |
@@ -61,7 +61,7 @@
 
 ### Attention & Transformers
 
-| Representative Notebook | Core Concept |
+| Representative Notebook | Main Concept |
 |---|---|
 | [Sequence-to-Sequence Translation](src/ch10_modern_recurrent_neural_networks/sec10_7_sequence_to_sequence_learning_for_machine_translation/03_seq2seq_training_and_prediction.ipynb) | Encoder–Decoder와 autoregressive decoding |
 | [Multi-Head Attention from Scratch](src/ch11_attention_mechanisms_and_transformers/sec11_5_multi_head_attention/01_multi_head_attention.ipynb) | Query, Key, Value와 parallel attention heads |
@@ -70,7 +70,7 @@
 
 ### Optimization Algorithms
 
-| Representative Notebook | Core Concept |
+| Representative Notebook | Main Concept |
 |---|---|
 | [Gradient Descent and Newton's Method](src/ch12_optimization_algorithms/sec12_3_gradient_descent/03_newton_method_and_preconditioning.ipynb) | First-order update, Hessian, preconditioning |
 | [Minibatch SGD from Scratch](src/ch12_optimization_algorithms/sec12_5_minibatch_stochastic_gradient_descent/03_minibatch_sgd_from_scratch.ipynb) | Statistical efficiency와 computational efficiency |
@@ -101,15 +101,14 @@
 | Chapter | Topic | Progress |
 |:---:|---|:---:|
 | **12** | **Optimization Algorithms** | **12.1–12.6 Done · 12.7 Next** |
-| 13 | Computational Performance | Planned |
-| 14 | Computer Vision | Planned |
-| 15 | Natural Language Processing: Pretraining | Planned |
-| 16 | Natural Language Processing: Applications | Milestone |
-| 17 | Reinforcement Learning | Planned |
-| 18 | Gaussian Processes | Planned |
-| 19 | Hyperparameter Optimization | Target |
+| **13** | **Computational Performance** | **Committed** |
+| 14 | Computer Vision | If Time Allows |
+| 15 | Natural Language Processing: Pretraining | If Time Allows |
+| 16 | Natural Language Processing: Applications | If Time Allows |
+| 17 | Reinforcement Learning | Optional |
+| 18 | Gaussian Processes | Optional |
+| 19 | Hyperparameter Optimization | Optional |
 | 20 | Generative Adversarial Networks | Optional |
-| 21 | Recommender Systems | Not planned |
 
 ---
 
