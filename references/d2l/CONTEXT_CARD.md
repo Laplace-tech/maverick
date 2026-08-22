@@ -1,6 +1,6 @@
 # Maverick D2L Context Card
 
-Updated: 2026-08-17 KST
+Updated: 2026-08-23 KST
 
 This file is the durable operating card for continuing the Maverick D2L study
 in a fresh Codex conversation. The repository-root `AGENTS.md` points here so
@@ -55,6 +55,9 @@ Relevant durable files:
 - Chapter 11 source: `references/d2l/source/ch11_full.txt`
 - Chapter 11 source SHA-256:
   `bb3680bf98c31cc034d74afc0fe02e16fccb233450fba30d97a5b5e4b7329787`
+- Chapter 12 source: `references/d2l/source/ch12_full.txt`
+- Chapter 12 source SHA-256:
+  `789c4509d9fc308327424f338830c4d9bf2c1ff0a606cb95f21568dd309efd91`
 
 The older `CODEX_RECOVERY_PROMPT.md` is retired. Do not ask the learner to paste
 it into a new conversation.
@@ -74,15 +77,24 @@ Completed curriculum:
 Current mode is normal new-material study:
 
 1. Chapter 11 Attention Mechanisms and Transformers is complete.
-2. Sections 11.7 and 11.8 implementation notebooks passed fresh execution.
-3. Resume at Chapter 12 Optimization Algorithms after its source is supplied
-   and range-validated.
+2. Chapter 12 Optimization Algorithms source is preserved and range-validated.
+3. Sections 12.1 through 12.6 are complete; Exercises were skipped by default.
+4. Seventeen Chapter 12 notebooks passed fresh execution during `스톱오버`
+   on 2026-08-23.
+5. Resume at Section 12.7 Adagrad; no Section 12.7 notebook has been created.
+
+Current deadline target:
+
+- Complete Chapter 12 Optimization Algorithms and Chapter 13 Computational
+  Performance before the 2026-09-01 semester begins.
+- Study resumed on 2026-08-22 after a short break. Rebuild momentum without
+  attempting to compress the missed week into a single session.
+- Preserve understanding, source order, learner-typed code, and validation;
+  the deadline does not authorize skipping the established study routine.
 
 Immediate next action:
 
-- Obtain and validate the Chapter 12 source before starting new material.
-- Do not extend Chapter 11 or invent an additional notebook for Section 11.9,
-  whose preserved source contains no implementation code.
+- Begin Section 12.7 Adagrad.
 - Use the normal `원문해석 -> 핵심정리 -> 실습코드` routine.
 
 Completed Section 11.6 state:
@@ -151,6 +163,30 @@ through Section 11.6 had no saved exception output.
 All paths in this inventory are relative to:
 
 `src/ch11_attention_mechanisms_and_transformers/`
+
+## 5.1 Chapter 12 notebook inventory
+
+Sections 12.1 through 12.6 are complete with 17 notebooks. During `스톱오버`
+on 2026-08-23, every notebook passed fresh execution from its own directory.
+The repository-wide structural audit found no blank cells or duplicate cell IDs.
+
+- `sec12_1_optimization_and_deep_learning/01_optimization_challenges.ipynb`
+- `sec12_2_convexity/01_convex_sets_and_functions.ipynb`
+- `sec12_2_convexity/02_convex_function_properties.ipynb`
+- `sec12_3_gradient_descent/01_one_dimensional_gradient_descent.ipynb`
+- `sec12_3_gradient_descent/02_multivariate_gradient_descent.ipynb`
+- `sec12_3_gradient_descent/03_newton_method_and_preconditioning.ipynb`
+- `sec12_4_stochastic_gradient_descent/01_stochastic_gradient_updates.ipynb`
+- `sec12_5_minibatch_stochastic_gradient_descent/01_vectorization_and_caches.ipynb`
+- `sec12_5_minibatch_stochastic_gradient_descent/02_airfoil_dataset.ipynb`
+- `sec12_5_minibatch_stochastic_gradient_descent/03_minibatch_sgd_from_scratch.ipynb`
+- `sec12_5_minibatch_stochastic_gradient_descent/04_concise_minibatch_sgd.ipynb`
+- `sec12_6_momentum/01_ill_conditioned_gradient_descent.ipynb`
+- `sec12_6_momentum/02_momentum_method.ipynb`
+- `sec12_6_momentum/03_effective_sample_weight.ipynb`
+- `sec12_6_momentum/04_momentum_from_scratch.ipynb`
+- `sec12_6_momentum/05_concise_momentum.ipynb`
+- `sec12_6_momentum/06_scalar_functions.ipynb`
 
 ## 6. Normal new-material routine
 

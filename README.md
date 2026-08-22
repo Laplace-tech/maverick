@@ -68,6 +68,14 @@
 | [Transformer Training & Attention](src/ch11_attention_mechanisms_and_transformers/sec11_7_the_transformer_architecture/05_transformer_training_and_attention.ipynb) | Self-Attention, causal mask, Encoder–Decoder |
 | [Vision Transformer](src/ch11_attention_mechanisms_and_transformers/sec11_8_transformers_for_vision/03_vision_transformer.ipynb) | Patch Embedding, ViT Block, image classification |
 
+### Optimization Algorithms
+
+| Representative Notebook | Core Concept |
+|---|---|
+| [Gradient Descent and Newton's Method](src/ch12_optimization_algorithms/sec12_3_gradient_descent/03_newton_method_and_preconditioning.ipynb) | First-order update, Hessian, preconditioning |
+| [Minibatch SGD from Scratch](src/ch12_optimization_algorithms/sec12_5_minibatch_stochastic_gradient_descent/03_minibatch_sgd_from_scratch.ipynb) | Statistical efficiency와 computational efficiency |
+| [Momentum from Scratch](src/ch12_optimization_algorithms/sec12_6_momentum/04_momentum_from_scratch.ipynb) | Velocity state, gradient averaging, accelerated convergence |
+
 ---
 
 ## Voyage Log
@@ -92,7 +100,7 @@
 
 | Chapter | Topic | Progress |
 |:---:|---|:---:|
-| **12** | **Optimization Algorithms** | **▶ Next** |
+| **12** | **Optimization Algorithms** | **12.1–12.6 Done · 12.7 Next** |
 | 13 | Computational Performance | Planned |
 | 14 | Computer Vision | Planned |
 | 15 | Natural Language Processing: Pretraining | Planned |
@@ -118,7 +126,8 @@ src/
 ├── ch08_modern_convolutional_neural_networks/       15 notebooks
 ├── ch09_recurrent_neural_networks/                  12 notebooks
 ├── ch10_modern_recurrent_neural_networks/           14 notebooks
-└── ch11_attention_mechanisms_and_transformers/      21 notebooks
+├── ch11_attention_mechanisms_and_transformers/      21 notebooks
+└── ch12_optimization_algorithms/                    17 notebooks
 ```
 
 ## Run Locally

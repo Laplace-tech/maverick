@@ -1,0 +1,2760 @@
+12.1 Optimization and Deep Learning
+In this section, we will discuss the relationship between optimization and deep learning as
+well as the challenges of using optimization in deep learning. For a deep learning problem,
+we will usually define a loss function first. Once we have the loss function, we can use an
+optimization algorithm in attempt to minimize the loss. In optimization, a loss function is
+often referred to as the objective function of the optimizationproblem. Bytraditionandcon
+vention most optimization algorithms are concerned with minimization. If we ever need to
+maximize an objective there is a simple solution: just flip the sign on the objective.
+468
+469
+Optimization and Deep Learning
+12.1.1 Goal of Optimization
+Although optimization provides a way to minimize the loss function for deep learning,
+in essence, the goals of optimization and deep learning are fundamentally different. The
+former is primarily concerned with minimizing an objective whereas the latter is concerned
+with finding a suitablemodel, givenafiniteamountofdata. InSection3.6, wediscussedthe
+difference between these two goals in detail. For instance, training error and generalization
+error generally differ: since the objective function of the optimization algorithm is usually a
+loss function based on the training dataset, the goal of optimization is to reduce the training
+error. However, the goal ofdeeplearning(ormorebroadly, statistical inference) is to reduce
+the generalization error. To accomplish the latter we need to pay attention to overfitting in
+addition to using the optimization algorithm to reduce the training error.
+%matplotlib inline
+import numpy as np
+import torch
+from mpl_toolkits import mplot3d
+from d2l import torch as d2l
+To illustrate the aforementioned different goals, let’s consider the empirical risk and the
+risk. As described in Section 4.7.3, the empirical risk is an average loss on the training
+dataset while the risk is the expected loss on the entire population of data. Below we define
+two functions: the risk function f and the empirical risk function g. Suppose that we have
+only a finite amount of training data. As a result, here g is less smooth than f.
+def f(x):
+return x * torch.cos(np.pi * x)
+def g(x):
+return f(x) + 0.2 * torch.cos(5 * np.pi * x)
+The graph below illustrates that the minimum of the empirical risk on a training dataset
+may be at a different location from the minimum of the risk (generalization error).
+def annotate(text, xy, xytext): #@save
+d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
+arrowprops=dict(arrowstyle='->'))
+x = torch.arange(0.5, 1.5, 0.01)
+d2l.set_figsize((4.5, 2.5))
+d2l.plot(x, [f(x), g(x)], 'x', 'risk')
+annotate('min of\nempirical risk', (1.0,-1.2), (0.5,-1.1))
+annotate('min of risk', (1.1,-1.05), (0.95,-0.5))
+12.1.2 Optimization Challenges in Deep Learning
+In this chapter, we are going to focus specifically on the performance of optimization algo
+rithms in minimizing the objective function, rather than a model’s generalization error. In
+Section 3.1 we distinguished between analytical solutions and numerical solutions in opti
+470
+Optimization Algorithms
+mization problems. In deep learning, most objective functions are complicated and do not
+have analytical solutions. Instead, we must use numerical optimization algorithms. The
+optimization algorithms in this chapter all fall into this category.
+There are many challenges in deep learning optimization. Some of the most vexing ones
+are local minima, saddle points, and vanishing gradients. Let’s have a look at them.
+Local Minima
+For any objective function 𝑓 (𝑥), if the value of 𝑓 (𝑥) at 𝑥 is smaller than the values of 𝑓 (𝑥)
+at any other points in the vicinity of 𝑥, then 𝑓 (𝑥) could be a local minimum. If the value
+of 𝑓 (𝑥) at 𝑥 is the minimum of the objective function over the entire domain, then 𝑓 (𝑥) is
+the global minimum.
+For example, given the function
+𝑓 (𝑥) = 𝑥 · cos(𝜋𝑥) for − 1.0 ≤ 𝑥 ≤ 2.0,
+we can approximate the local minimum and global minimum of this function.
+x = torch.arange(-1.0, 2.0, 0.01)
+d2l.plot(x, [f(x), ], 'x', 'f(x)')
+annotate('local minimum', (-0.3,-0.25), (-0.77,-1.0))
+annotate('global minimum', (1.1,-0.95), (0.6, 0.8))
+(12.1.1)
+The objective function of deep learning models usually has many local optima. When the
+numerical solution of an optimization problem is near the local optimum, the numerical
+471
+Optimization and Deep Learning
+solution obtained by the final iteration may only minimize the objective function locally,
+rather than globally, as the gradient of the objective function’s solutions approaches or
+becomes zero. Only some degree of noise might knock the parameter out of the local
+minimum. In fact, this is one of the beneficial properties of minibatch stochastic gradient
+descent where the natural variation of gradients over minibatches is able to dislodge the
+parameters from local minima.
+Saddle Points
+Besides local minima, saddle points are another reason for gradients to vanish. A saddle
+point is any location where all gradients of a function vanish but which is neither a global
+nor a local minimum. Consider the function 𝑓 (𝑥) = 𝑥3. Its first and second derivative van
+ish for 𝑥 = 0. Optimizationmightstallatthispoint, eventhoughitisnotaminimum.
+x = torch.arange(-2.0, 2.0, 0.01)
+d2l.plot(x, [x**3], 'x', 'f(x)')
+annotate('saddle point', (0,-0.2), (-0.52,-5.0))
+Saddle points in higher dimensions are even more insidious, as the example below shows.
+Consider the function 𝑓 (𝑥, 𝑦) = 𝑥2−𝑦2. It has its saddle point at (0,0). This is a maximum
+with respect to 𝑦 and a minimum with respect to 𝑥. Moreover, it looks like a saddle, which
+is where this mathematical property got its name.
+x, y = torch.meshgrid(
+torch.linspace(-1.0, 1.0, 101), torch.linspace(-1.0, 1.0, 101))
+z = x**2- y**2
+ax = d2l.plt.figure().add_subplot(111, projection='3d')
+ax.plot_wireframe(x, y, z, **{'rstride': 10, 'cstride': 10})
+ax.plot([0], [0], [0], 'rx')
+ticks = [-1, 0, 1]
+d2l.plt.xticks(ticks)
+d2l.plt.yticks(ticks)
+ax.set_zticks(ticks)
+d2l.plt.xlabel('x')
+d2l.plt.ylabel('y');
+We assume that the input of a function is a 𝑘-dimensional vector and its output is a scalar,
+472
+Optimization Algorithms
+so its Hessian matrix will have 𝑘 eigenvalues. The solution of the function could be a local
+minimum, a local maximum, or a saddle point at a position where the function gradient is
+zero:
+• Whenthe eigenvalues of the function’s Hessian matrix at the zero-gradient position are
+all positive, we have a local minimum for the function.
+• Whenthe eigenvalues of the function’s Hessian matrix at the zero-gradient position are
+all negative, we have a local maximum for the function.
+• Whenthe eigenvalues of the function’s Hessian matrix at the zero-gradient position are
+negative and positive, we have a saddle point for the function.
+For high-dimensional problems the likelihood that at least some of the eigenvalues are neg
+ative is quite high. This makessaddlepointsmorelikelythanlocalminima. Wewilldiscuss
+some exceptions to this situation in the next section when introducing convexity. In short,
+convex functions are those where the eigenvalues of the Hessian are never negative. Sadly,
+though, most deep learning problems do not fall into this category. Nonetheless it is a great
+tool to study optimization algorithms.
+Vanishing Gradients
+Probably the most insidious problem to encounter is the vanishing gradient. Recall our
+commonly-used activation functions and their derivatives in Section 5.1.2. For instance,
+assume that we want to minimize the function 𝑓 (𝑥) = tanh(𝑥) and we happen to get started
+at 𝑥 = 4. As we can see, the gradient of 𝑓 is close to nil. More specifically, 𝑓 (𝑥) =
+1 − tanh2(𝑥) and thus 𝑓 (4) = 0.0013. Consequently, optimization will get stuck for a
+long time before we make progress. This turns out to be one of the reasons that training
+deep learning models was quite tricky prior to the introduction of the ReLU activation
+function.
+x = torch.arange(-2.0, 5.0, 0.01)
+d2l.plot(x, [torch.tanh(x)], 'x', 'f(x)')
+annotate('vanishing gradient', (4, 1), (2, 0.0))
+As we saw, optimization for deep learning is full of challenges. Fortunately there exists a
+robust range of algorithms that perform well and that are easy to use even for beginners.
+473
+Optimization and Deep Learning
+166
+Furthermore, it is not really necessary to find the best solution. Local optima or even ap
+proximate solutions thereof are still very useful.
+12.1.3 Summary
+• Minimizing the training error does not guarantee that we find the best set of parameters
+to minimize the generalization error.
+• Theoptimization problems may have many local minima.
+• Theproblemmayhaveevenmoresaddlepoints,asgenerallytheproblemsarenotconvex.
+• Vanishing gradients can cause optimization to stall. Often a reparametrization of the
+problem helps. Good initialization of the parameters can be beneficial, too.
+12.1.4 Exercises
+1. Consider a simple MLP with a single hidden layer of, say, 𝑑 dimensions in the hid
+den layer and a single output. Show that for any local minimum there are at least 𝑑!
+equivalent solutions that behave identically.
+2. Assume that we have a symmetric random matrix M where the entries 𝑀𝑖𝑗 = 𝑀𝑗𝑖 are
+each drawn from some probability distribution 𝑝𝑖𝑗. Furthermore assume that 𝑝𝑖𝑗(𝑥) =
+𝑝𝑖𝑗 (−𝑥), i.e., that the distribution is symmetric (see e.g., Wigner (1958) for details).
+1. Prove that the distribution over eigenvalues is also symmetric. That is, for any eigen
+vector v the probability that the associated eigenvalue 𝜆 satisfies 𝑃(𝜆 > 0) = 𝑃(𝜆 <
+0).
+2. Whydoes the above not imply 𝑃(𝜆 > 0) = 0.5?
+3. What other challenges involved in deep learning optimization can you think of?
+4. Assume that you want to balance a (real) ball on a (real) saddle.
+1. Whyis this hard?
+2. Can you exploit this effect also for optimization algorithms?
+Discussions166.
+474
+Optimization Algorithms
+12.2 Convexity
+Convexity plays a vital role in the design of optimization algorithms. This is largely due
+to the fact that it is much easier to analyze and test algorithms in such a context. In other
+words, if the algorithm performs poorly even in the convex setting, typically we should not
+hope to see great results otherwise. Furthermore, even though the optimization problems in
+deep learning are generally nonconvex, they often exhibit some properties of convex ones
+near local minima. This can lead to exciting new optimization variants such as (Izmailov
+et al., 2018).
+%matplotlib inline
+import numpy as np
+import torch
+from mpl_toolkits import mplot3d
+from d2l import torch as d2l
+12.2.1 Definitions
+Before convex analysis, we need to define convex sets and convex functions. They lead to
+mathematical tools that are commonly applied to machine learning.
+Convex Sets
+Sets are the basis of convexity. Simply put, a set X in a vector space is convex if for any
+𝑎, 𝑏 ∈ X the line segment connecting 𝑎 and 𝑏 is also in X. In mathematical terms this
+means that for all 𝜆 ∈ [0,1] we have
+𝜆𝑎 + (1−𝜆)𝑏 ∈ X whenever 𝑎,𝑏 ∈ X.
+(12.2.1)
+This sounds a bit abstract. Consider Fig. 12.2.1. The first set is not convex since there exist
+line segments that are not contained in it. The other two sets suffer no such problem.
+Fig. 12.2.1 The first set is nonconvex and the other two are convex.
+Definitions on their own are not particularly useful unless you can do something with them.
+In this case we can look at intersections as shown in Fig. 12.2.2. Assume that X and Y are
+convex sets. Then X ∩ Y is also convex. To see this, consider any 𝑎,𝑏 ∈ X ∩ Y. Since X
+and Y are convex, the line segments connecting 𝑎 and 𝑏 are contained in both X and Y.
+Given that, they also need to be contained in X ∩ Y, thus proving our theorem.
+475
+Convexity
+Fig. 12.2.2 The intersection between two convex sets is convex.
+We can strengthen this result with little effort: given convex sets X𝑖, their intersection ∩𝑖X𝑖
+is convex. To see that the converse is not true, consider two disjoint sets X ∩ Y = ∅. Now
+pick 𝑎 ∈ X and 𝑏 ∈ Y. ThelinesegmentinFig.12.2.3connecting 𝑎 and 𝑏 needstocontain
+some part that is neither in X nor in Y, since we assumed that X ∩ Y = ∅. Hence the line
+segment is not in X ∪Y either, thus proving that in general unions of convex sets need not
+be convex.
+Fig. 12.2.3 The union of two convex sets need not be convex.
+Typically the problems in deep learning are defined on convex sets. For instance, R𝑑, the
+set of 𝑑-dimensional vectors of real numbers, is a convex set (after all, the line between any
+two points in R𝑑 remains in R𝑑). In some cases we work with variables of bounded length,
+such as balls of radius 𝑟 as defined by {x|x ∈ R𝑑 and x ≤ 𝑟}.
+Convex Functions
+Now that we have convex sets we can introduce convex functions 𝑓. Given a convex set X,
+a function 𝑓 : X → Ris convex if for all 𝑥,𝑥 ∈ X and for all 𝜆 ∈ [0,1] we have
+𝜆𝑓 (𝑥) + (1 −𝜆)𝑓(𝑥) ≥ 𝑓(𝜆𝑥 + (1−𝜆)𝑥).
+(12.2.2)
+To illustrate this let’s plot a few functions and check which ones satisfy the requirement.
+Below we define a few functions, both convex and nonconvex.
+f = lambda x: 0.5 * x**2 # Convex
+g = lambda x: torch.cos(np.pi * x) # Nonconvex
+h = lambda x: torch.exp(0.5 * x) # Convex
+x, segment = torch.arange(-2, 2, 0.01), torch.tensor([-1.5, 1])
+d2l.use_svg_display()
+_, axes = d2l.plt.subplots(1, 3, figsize=(9, 3))
+for ax, func in zip(axes, [f, g, h]):
+d2l.plot([x, segment], [func(x), func(segment)], axes=ax)
+476
+Optimization Algorithms
+As expected, the cosine function is nonconvex, whereas the parabola and the exponential
+function are. Note that the requirement that X is a convex set is necessary for the condition
+to makesense. Otherwisetheoutcomeof 𝑓 (𝜆𝑥+(1−𝜆)𝑥) mightnotbewelldefined.
+Jensen’s Inequality
+Givenaconvex function 𝑓, oneofthemostusefulmathematicaltoolsisJensen’sinequality.
+It amounts to a generalization of the definition of convexity:
+𝛼𝑖 𝑓 (𝑥𝑖) ≥ 𝑓
+𝑖
+𝛼𝑖𝑥𝑖 and 𝐸𝑋[𝑓(𝑋)] ≥ 𝑓 (𝐸𝑋[𝑋]),
+𝑖
+(12.2.3)
+where 𝛼𝑖 are nonnegative real numbers such that 𝑖 𝛼𝑖 = 1 and 𝑋 is a random variable. In
+other words, the expectation of a convex function is no less than the convex function of an
+expectation, where the latter is usually a simpler expression. To prove the first inequality
+we repeatedly apply the definition of convexity to one term in the sum at a time.
+One of the common applications of Jensen’s inequality is to bound a more complicated
+expression by a simpler one. For example, its application can be with regard to the log
+likelihood of partially observed random variables. That is, we use
+𝐸𝑌∼𝑃(𝑌)[−log𝑃(𝑋 | 𝑌)] ≥ −log𝑃(𝑋),
+since 
+(12.2.4)
+𝑃(𝑌)𝑃(𝑋 | 𝑌)𝑑𝑌 = 𝑃(𝑋). This can be used in variational methods. Here 𝑌
+is typically the unobserved random variable, 𝑃(𝑌) is the best guess of how it might be
+distributed, and 𝑃(𝑋) is the distribution with 𝑌 integrated out. For instance, in clustering
+𝑌 might be the cluster labels and 𝑃(𝑋 | 𝑌) is the generative model when applying cluster
+labels.
+12.2.2 Properties
+Convex functions have many useful properties. We describe a few commonly-used ones
+below.
+477
+Convexity
+Local Minima Are Global Minima
+First and foremost, the local minima of convex functions are also the global minima. We
+can prove it by contradiction as follows.
+Consider a convex function 𝑓 defined on a convex set X. Suppose that 𝑥∗ ∈ X is a local
+minimum: there exists a small positive value 𝑝 so that for 𝑥 ∈ X that satisfies 0 < |𝑥−𝑥∗| ≤
+𝑝 we have 𝑓(𝑥∗) < 𝑓(𝑥).
+Assume that the local minimum 𝑥∗ is not the global minimum of 𝑓: there exists 𝑥 ∈ X
+for which 𝑓 (𝑥) < 𝑓(𝑥∗). There also exists 𝜆 ∈ [0,1) such as 𝜆 = 1 − 𝑝
+| 𝑥∗−𝑥 | so that
+0 < |𝜆𝑥∗ + (1−𝜆)𝑥 −𝑥∗| ≤ 𝑝.
+However, according to the definition of convex functions, we have
+𝑓 (𝜆𝑥∗ + (1 −𝜆)𝑥) ≤ 𝜆𝑓(𝑥∗) + (1−𝜆)𝑓(𝑥)
+< 𝜆𝑓(𝑥∗) + (1−𝜆)𝑓(𝑥∗)
+= 𝑓(𝑥∗),
+(12.2.5)
+which contradicts with our statement that 𝑥∗ is a local minimum. Therefore, there does
+not exist 𝑥 ∈ X for which 𝑓(𝑥) < 𝑓(𝑥∗). The local minimum 𝑥∗ is also the global
+minimum.
+For instance, the convex function 𝑓 (𝑥) = (𝑥 − 1)2 has a local minimum at 𝑥 = 1, which is
+also the global minimum.
+f = lambda x: (x- 1) ** 2
+d2l.set_figsize()
+d2l.plot([x, segment], [f(x), f(segment)], 'x', 'f(x)')
+The fact that the local minima for convex functions are also the global minima is very
+convenient. It means that if we minimize functions we cannot “get stuck”. Note, though,
+that this does not mean that there cannot be more than one global minimum or that there
+might even exist one. For instance, the function 𝑓 (𝑥) = max(|𝑥|−1,0) attains its minimum
+value over the interval [−1,1]. Conversely, the function 𝑓 (𝑥) = exp(𝑥) does not attain a
+minimum value on R: for 𝑥 → −∞ it asymptotes to 0, but there is no 𝑥 for which 𝑓 (𝑥) =
+0.
+478 OptimizationAlgorithms
+BelowSetsofConvexFunctionsAreConvex
+Wecanconvenientlydefineconvexsetsviabelowsetsofconvexfunctions. Concretely,
+givenaconvexfunction 𝑓 definedonaconvexsetX,anybelowset
+S𝑏
+def={𝑥|𝑥∈Xand 𝑓(𝑥)≤𝑏} (12.2.6)
+isconvex.
+Let’sprovethisquickly.Recallthatforany𝑥,𝑥 ∈S𝑏weneedtoshowthat𝜆𝑥+(1−𝜆)𝑥 ∈
+S𝑏aslongas𝜆∈[0,1].Since 𝑓(𝑥)≤𝑏and 𝑓(𝑥)≤𝑏,bythedefinitionofconvexitywe
+have
+𝑓(𝜆𝑥+(1−𝜆)𝑥)≤𝜆𝑓(𝑥)+(1−𝜆)𝑓(𝑥)≤𝑏. (12.2.7)
+ConvexityandSecondDerivatives
+Wheneverthesecondderivativeofafunction 𝑓 :R𝑛→Rexistsit isveryeasytocheck
+whether 𝑓 isconvex. Allweneedtodoischeckwhether theHessianof 𝑓 ispositive
+semidefinite: ∇2𝑓 0, i.e.,denotingtheHessianmatrix∇2𝑓 byH,xHx≥0forall
+x∈R𝑛.Forinstance,thefunction 𝑓(x)=1
+2 x 2isconvexsince∇2𝑓 =1,i.e.,itsHessian
+isanidentitymatrix.
+Formally,atwice-differentiableone-dimensionalfunction 𝑓 :R→Risconvexifandonly
+if itssecondderivative 𝑓 ≥0. Foranytwice-differentiablemultidimensional function
+𝑓 :R𝑛→R,itisconvexifandonlyifitsHessian∇2𝑓 0.
+First,weneedtoprovetheone-dimensionalcase.Toseethatconvexityof 𝑓 implies 𝑓 ≥0
+weusethefactthat
+1
+2 𝑓(𝑥+𝜖)+ 1
+2 𝑓(𝑥−𝜖)≥ 𝑓 𝑥+𝜖
+2 + 𝑥−𝜖
+2 = 𝑓(𝑥). (12.2.8)
+Sincethesecondderivativeisgivenbythelimitoverfinitedifferencesitfollowsthat
+𝑓 (𝑥)=lim
+𝜖→0
+𝑓(𝑥+𝜖)+𝑓(𝑥−𝜖)−2𝑓(𝑥)
+𝜖2
+≥0. (12.2.9)
+Toseethat 𝑓 ≥0impliesthat 𝑓 isconvexweusethefact that 𝑓 ≥0impliesthat 𝑓
+isamonotonicallynondecreasingfunction. Let𝑎<𝑥<𝑏bethreepointsinR,where
+𝑥 = (1−𝜆)𝑎+𝜆𝑏and𝜆 ∈ (0,1). Accordingtothemeanvaluetheorem, thereexist
+𝛼∈[𝑎,𝑥]and𝛽∈[𝑥,𝑏]suchthat
+𝑓 (𝛼)= 𝑓(𝑥)−𝑓(𝑎)
+𝑥−𝑎 and 𝑓 (𝛽)= 𝑓(𝑏)−𝑓(𝑥)
+𝑏−𝑥 . (12.2.10)
+Bymonotonicity 𝑓 (𝛽)≥ 𝑓 (𝛼),hence
+𝑥−𝑎
+𝑏−𝑎 𝑓(𝑏)+ 𝑏−𝑥
+𝑏−𝑎 𝑓(𝑎)≥ 𝑓(𝑥). (12.2.11)
+Since𝑥=(1−𝜆)𝑎+𝜆𝑏,wehave
+𝜆𝑓(𝑏)+(1−𝜆)𝑓(𝑎)≥ 𝑓((1−𝜆)𝑎+𝜆𝑏), (12.2.12)
+479
+Convexity
+thus proving convexity.
+Second, weneedalemmabeforeprovingthemultidimensionalcase: 𝑓 : R𝑛 → Risconvex
+if and only if for all x,y ∈ R𝑛
+𝑔(𝑧) def
+= 𝑓(𝑧x+ (1−𝑧)y) where 𝑧 ∈ [0,1]
+is convex.
+(12.2.13)
+To prove that convexity of 𝑓 implies that 𝑔 is convex, wecanshowthatforall 𝑎, 𝑏,𝜆 ∈ [0,1]
+(thus 0 ≤ 𝜆𝑎 + (1−𝜆)𝑏 ≤ 1)
+𝑔(𝜆𝑎 + (1−𝜆)𝑏)
+=𝑓 ((𝜆𝑎 + (1−𝜆)𝑏)x+ (1−𝜆𝑎 − (1−𝜆)𝑏)y)
+=𝑓 (𝜆 (𝑎x+ (1−𝑎)y) + (1−𝜆) (𝑏x+ (1−𝑏)y))
+≤𝜆𝑓 (𝑎x+ (1−𝑎)y) + (1−𝜆)𝑓 (𝑏x+ (1−𝑏)y)
+=𝜆𝑔(𝑎) + (1 −𝜆)𝑔(𝑏).
+To prove the converse, we can show that for all 𝜆 ∈ [0,1]
+𝑓 (𝜆x + (1−𝜆)y)
+=𝑔(𝜆 · 1 + (1−𝜆) ·0)
+≤𝜆𝑔(1) + (1 −𝜆)𝑔(0)
+=𝜆𝑓 (x) + (1−𝜆)𝑓(y).
+(12.2.14)
+(12.2.15)
+Finally, using the lemma above and the result of the one-dimensional case, the multidimen
+sional case can be proven as follows. A multidimensional function 𝑓 : R𝑛 → R is convex
+if and only if for all x,y ∈ R𝑛 𝑔(𝑧) def
+= 𝑓(𝑧x+ (1−𝑧)y), where 𝑧 ∈ [0,1], is convex. Ac
+cording to the one-dimensional case, this holds if and only if 𝑔 = (x−y) H(x−y) ≥ 0
+(H def
+= ∇2𝑓) for all x,y ∈ R𝑛, which is equivalent to H 0 per the definition of positive
+semidefinite matrices.
+12.2.3 Constraints
+One of the nice properties of convex optimization is that it allows us to handle constraintsef
+ficiently. Thatis, it allowsustosolveconstrainedoptimizationproblemsoftheform:
+minimize
+x
+𝑓 (x)
+subject to 𝑐𝑖(x) ≤ 0 for all 𝑖 ∈ {1,...,𝑛},
+(12.2.16)
+where 𝑓 is the objective and the functions 𝑐𝑖 are constraint functions. To see what this does
+consider the case where 𝑐1(x) = x 2 −1. In this case the parameters x are constrained to
+the unit ball. If a second constraint is 𝑐2(x) = vx+𝑏, then this corresponds to all x lying
+on a half-space. Satisfying both constraints simultaneously amounts to selecting a slice of
+a ball.
+480
+Optimization Algorithms
+Lagrangian
+In general, solving a constrained optimization problem is difficult. One way of addressing
+it stems from physics with a rather simple intuition. Imagine a ball inside a box. The ball
+will roll to the place that is lowest and the forces of gravity will be balanced out with the
+forces that the sides of the box can impose on the ball. In short, the gradient of the objective
+function (i.e., gravity) will be offset by the gradient of the constraint function (the ball need
+to remain inside the box by virtue of the walls “pushing back”). Note that some constraints
+may not be active: the walls that are not touched by the ball will not be able to exert any
+force on the ball.
+Skipping over the derivation of the Lagrangian 𝐿, the above reasoning can be expressed
+via the following saddle point optimization problem:
+𝑛
+𝐿(x,𝛼1, . . .,𝛼𝑛) = 𝑓 (x) +
+𝑖=1
+𝛼𝑖𝑐𝑖(x) where 𝛼𝑖 ≥ 0.
+(12.2.17)
+Here the variables 𝛼𝑖 (𝑖 = 1,. . .,𝑛) are the so-called Lagrange multipliers that ensure that
+constraints are properly enforced. They are chosen just large enough to ensure that 𝑐𝑖(x) ≤
+0 for all 𝑖. For instance, for any x where 𝑐𝑖(x) < 0 naturally, we’d end up picking 𝛼𝑖 = 0.
+Moreover, this is a saddle point optimization problem where one wants to maximize 𝐿 with
+respect to all 𝛼𝑖 and simultaneously minimize it with respect to x. There is a rich body of
+literature explaining how to arrive at the function 𝐿(x, 𝛼1, . . . , 𝛼𝑛). For our purposes it is
+sufficient to know that the saddle point of 𝐿 is where the original constrained optimization
+problem is solved optimally.
+Penalties
+Oneway of satisfying constrained optimization problems at least approximately is to adapt
+the Lagrangian 𝐿. Rather than satisfying 𝑐𝑖(x) ≤ 0 we simply add 𝛼𝑖𝑐𝑖(x) to the objective
+function 𝑓 (𝑥). This ensures that the constraints will not be violated too badly.
+In fact, we have been using this trick all along. Consider weight decay in Section 3.7. In it
+we add 𝜆
+2 w2 to the objective function to ensure that w does not grow too large. From the
+constrained optimization point of view we can see that this will ensure that w2 −𝑟2 ≤ 0
+for some radius 𝑟. Adjusting the value of 𝜆 allows us to vary the size of w.
+In general, adding penalties is a good way of ensuring approximate constraint satisfaction.
+In practice this turns out to be much more robust than exact satisfaction. Furthermore, for
+nonconvex problems many of the properties that make the exact approach so appealing in
+the convex case (e.g., optimality) no longer hold.
+Projections
+An alternative strategy for satisfying constraints is projections. Again, we encountered
+them before, e.g., when dealing with gradient clipping in Section 9.5. There we ensured
+481
+Convexity
+that a gradient has length bounded by 𝜃 via
+g ←g·min(1,𝜃/g ).
+(12.2.18)
+This turns out to be a projection of g onto the ball of radius 𝜃. More generally, a projection
+on a convex set X is defined as
+ProjX(x) = argmin
+x∈X
+which is the closest point in X to x.
+x−x ,
+Fig. 12.2.4 Convex Projections.
+(12.2.19)
+The mathematical definition of projections may sound a bit abstract. Fig. 12.2.4 explains it
+somewhat more clearly. In it we have two convex sets, a circle and a diamond. Points inside
+both sets (yellow) remain unchanged during projections. Points outside both sets (black)
+are projected to the points inside the sets (red) that are closet to the original points (black).
+While for ℓ2 balls this leaves the direction unchanged, this need not be the case in general,
+as can be seen in the case of the diamond.
+One of the uses for convex projections is to compute sparse weight vectors. In this case we
+project weight vectors onto an ℓ1 ball, which is a generalized version of the diamond case
+in Fig. 12.2.4.
+12.2.4 Summary
+In the context of deep learning the main purpose of convex functions is to motivate opti
+mization algorithms and help us understand them in detail. In the following we will see
+how gradient descent and stochastic gradient descent can be derived accordingly.
+• Intersections of convex sets are convex. Unions are not.
+• Theexpectationofaconvexfunctionisnolessthantheconvexfunctionofanexpectation
+(Jensen’s inequality).
+• Atwice-differentiable function is convex if and only if its Hessian (a matrix of second
+derivatives) is positive semidefinite.
+• Convex constraints can be added via the Lagrangian. In practice we may simply add
+them with a penalty to the objective function.
+• Projections map to points in the convex set closest to the original points.
+482
+Optimization Algorithms
+167
+12.2.5 Exercises
+1. Assume that we want to verify convexity of a set by drawing all lines between points
+within the set and checking whether the lines are contained.
+1. Prove that it is sufficient to check only the points on the boundary.
+2. Prove that it is sufficient to check only the vertices of the set.
+2. Denote by B𝑝[𝑟] def
+= {x|x ∈ R𝑑 and x 𝑝 ≤ 𝑟} theball of radius 𝑟 using the 𝑝-norm.
+Prove that B𝑝[𝑟] is convex for all 𝑝 ≥ 1.
+3. Givenconvexfunctions 𝑓 and𝑔,showthatmax( 𝑓,𝑔) isconvex,too. Provethatmin( 𝑓,𝑔)
+is not convex.
+4. Prove that the normalization of the softmax function is convex. More specifically prove
+the convexity of 𝑓 (𝑥) = log 𝑖 exp(𝑥𝑖).
+5. Prove that linear subspaces, i.e., X = {x|Wx = b}, are convex sets.
+6. Prove that in the case of linear subspaces with b = 0 the projection ProjX can be written
+as Mx for some matrix M.
+7. Show that for twice-differentiable convex functions 𝑓 we can write 𝑓 (𝑥 + 𝜖) = 𝑓 (𝑥) +
+𝜖 𝑓 (𝑥) + 1
+2𝜖2 𝑓 (𝑥 +𝜉) for some 𝜉 ∈ [0,𝜖].
+8. Given a convex set X and two vectors x and y, prove that projections never increase
+distances, i.e., x − y ≥ ProjX(x) − ProjX(y) .
+Discussions167.
+12.3 Gradient Descent
+In this section we are going to introduce the basic concepts underlying gradient descent.
+Although it is rarely used directly in deep learning, an understanding of gradient descent is
+key to understanding stochastic gradient descent algorithms. For instance, the optimization
+problem might diverge due to an overly large learning rate. This phenomenon can already
+be seen in gradient descent. Likewise, preconditioning is a common technique in gradient
+descent and carries over to more advanced algorithms. Let’s start with a simple special
+case.
+12.3.1 One-Dimensional Gradient Descent
+Gradient descent in one dimension is an excellent example to explain why the gradient
+descent algorithm may reduce the value of the objective function. Consider some con
+tinuously differentiable real-valued function 𝑓 : R → R. Using a Taylor expansion we
+483
+Gradient Descent
+obtain
+𝑓 (𝑥 + 𝜖) = 𝑓(𝑥) +𝜖 𝑓 (𝑥) + O(𝜖2).
+(12.3.1)
+That is, in first-order approximation 𝑓 (𝑥 + 𝜖) is given by the function value 𝑓 (𝑥) and the
+first derivative 𝑓 (𝑥) at 𝑥. It is not unreasonable to assume that for small 𝜖 moving in the
+direction of the negative gradient will decrease 𝑓. To keep things simple we pick a fixed
+step size 𝜂 > 0 and choose 𝜖 = −𝜂𝑓 (𝑥). Plugging this into the Taylor expansion above we
+get
+𝑓 (𝑥 −𝜂𝑓 (𝑥)) = 𝑓(𝑥) −𝜂𝑓 2(𝑥) + O(𝜂2𝑓 2(𝑥)).
+(12.3.2)
+If the derivative 𝑓 (𝑥) ≠ 0 doesnot vanish wemakeprogresssince 𝜂 𝑓 2(𝑥) > 0. Moreover,
+we can always choose 𝜂 small enough for the higher-order terms to become irrelevant.
+Hence we arrive at
+𝑓 (𝑥 −𝜂𝑓 (𝑥)) ⪅ 𝑓(𝑥).
+This means that, if we use
+𝑥 ←𝑥−𝜂𝑓 (𝑥)
+(12.3.3)
+(12.3.4)
+to iterate 𝑥, the value of function 𝑓 (𝑥) might decline. Therefore, in gradient descent we first
+choose an initial value 𝑥 and a constant 𝜂 > 0 and then use them to continuously iterate 𝑥
+until the stop condition is reached, for example, when the magnitude of the gradient | 𝑓 (𝑥)|
+is small enough or the number of iterations has reached a certain value.
+For simplicity we choose the objective function 𝑓 (𝑥) = 𝑥2 to illustrate how to implement
+gradient descent. Although we know that 𝑥 = 0 is the solution to minimize 𝑓 (𝑥), we still
+use this simple function to observe how 𝑥 changes.
+%matplotlib inline
+import numpy as np
+import torch
+from d2l import torch as d2l
+def f(x): # Objective function
+return x ** 2
+def f_grad(x): # Gradient (derivative) of the objective function
+return 2 * x
+Next, we use 𝑥 = 10 as the initial value and assume 𝜂 = 0.2. Using gradient descent to
+iterate 𝑥 for 10 times we can see that, eventually, the value of 𝑥 approaches the optimal
+solution.
+def gd(eta, f_grad):
+x = 10.0
+results = [x]
+(continues on next page)
+484
+Optimization Algorithms
+(continued from previous page)
+for i in range(10):
+x-= eta * f_grad(x)
+results.append(float(x))
+print(f'epoch 10, x: {x:f}')
+return results
+results = gd(0.2, f_grad)
+epoch 10, x: 0.060466
+The progress of optimizing over 𝑥 can be plotted as follows.
+def show_trace(results, f):
+n = max(abs(min(results)), abs(max(results)))
+f_line = torch.arange(-n, n, 0.01)
+d2l.set_figsize()
+d2l.plot([f_line, results], [[f(x) for x in f_line], [
+f(x) for x in results]], 'x', 'f(x)', fmts=['-', '-o'])
+show_trace(results, f)
+Learning Rate
+The learning rate 𝜂 can be set by the algorithm designer. If we use a learning rate that is too
+small, it will cause 𝑥 to update very slowly, requiring more iterations to get a better solu
+tion. To show what happens in such a case, consider the progress in the same optimization
+problem for 𝜂 = 0.05. As we can see, even after 10 steps we are still very far from the
+optimal solution.
+show_trace(gd(0.05, f_grad), f)
+epoch 10, x: 3.486784
+Conversely, if we use an excessively high learning rate, |𝜂 𝑓 (𝑥)| might be too large for
+the first-order Taylor expansion formula. That is, the term O(𝜂2 𝑓 2(𝑥)) in (12.3.2) might
+485
+Gradient Descent
+become significant. In this case, we cannot guarantee that the iteration of 𝑥 will be able to
+lower the value of 𝑓 (𝑥). Forexample, whenwesetthelearningrateto𝜂 = 1.1, 𝑥 overshoots
+the optimal solution 𝑥 = 0 and gradually diverges.
+show_trace(gd(1.1, f_grad), f)
+epoch 10, x: 61.917364
+Local Minima
+To illustrate what happens for nonconvex functions consider the case of 𝑓 (𝑥) = 𝑥 ·cos(𝑐𝑥)
+for some constant 𝑐. This function has infinitely many local minima. Depending on our
+choice of the learning rate and depending on how well conditioned the problem is, we may
+end up with one of many solutions. The example below illustrates how an (unrealistically)
+high learning rate will lead to a poor local minimum.
+c = torch.tensor(0.15 * np.pi)
+def f(x): # Objective function
+return x * torch.cos(c * x)
+def f_grad(x): # Gradient of the objective function
+return torch.cos(c * x)- c * x * torch.sin(c * x)
+show_trace(gd(2, f_grad), f)
+486
+Optimization Algorithms
+epoch 10, x:-1.528166
+12.3.2 Multivariate Gradient Descent
+Now that we have a better intuition of the univariate case, let’s consider the situation where
+x = [𝑥1,𝑥2,...,𝑥𝑑] . That is, the objective function 𝑓 : R𝑑 → R maps vectors into
+scalars. Correspondingly its gradient is multivariate, too. It is a vector consisting of 𝑑
+partial derivatives:
+∇𝑓 (x) = 𝜕𝑓(x)
+𝜕𝑥1 
+, 𝜕𝑓(x)
+𝜕𝑥2 
+,..., 𝜕 𝑓 (x)
+.
+(12.3.5)
+𝜕𝑥𝑑
+Each partial derivative element 𝜕 𝑓 (x)/𝜕𝑥𝑖 in the gradient indicates the rate of change of
+𝑓 at x with respect to the input 𝑥𝑖. As before in the univariate case we can use the cor
+responding Taylor approximation for multivariate functions to get some idea of what we
+should do. In particular, we have that
+𝑓 (x +𝝐) = 𝑓(x) +𝝐 ∇𝑓(x) +O( 𝝐 2).
+(12.3.6)
+In other words, uptosecond-ordertermsin𝝐 thedirectionofsteepestdescentisgivenbythe
+negative gradient −∇𝑓 (x). Choosing a suitable learning rate 𝜂 > 0 yields the prototypical
+gradient descent algorithm:
+x ←x−𝜂∇𝑓(x).
+(12.3.7)
+To see how the algorithm behaves in practice let’s construct an objective function 𝑓 (x) =
+𝑥2
+1 + 2𝑥2
+2 with a two-dimensional vector x = [𝑥1,𝑥2] as input and a scalar as output. The
+gradient is given by ∇𝑓 (x) = [2𝑥1,4𝑥2] . We will observe the trajectory of x by gradient
+descent from the initial position [−5,−2].
+To beginwith, weneedtwomorehelperfunctions. Thefirstusesanupdatefunctionandap
+plies it 20 times to the initial value. The second helper visualizes the trajectory of x.
+def train_2d(trainer, steps=20, f_grad=None): #@save
+"""Optimize a 2D objective function with a customized trainer."""
+# `s1` and `s2` are internal state variables that will be used in Momentum,
+↩→ adagrad, RMSProp
+(continues on next page)
+487
+Gradient Descent
+(continued from previous page)
+x1, x2, s1, s2 =-5,-2, 0, 0
+results = [(x1, x2)]
+for i in range(steps):
+if f_grad:
+x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+else:
+x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
+results.append((x1, x2))
+print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
+return results
+def show_trace_2d(f, results): #@save
+"""Show the trace of 2D variables during optimization."""
+d2l.set_figsize()
+d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
+x1, x2 = torch.meshgrid(torch.arange(-5.5, 1.0, 0.1),
+torch.arange(-3.0, 1.0, 0.1), indexing='ij')
+d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
+d2l.plt.xlabel('x1')
+d2l.plt.ylabel('x2')
+Next, we observe the trajectory of the optimization variable x for learning rate 𝜂 = 0.1.
+We can see that after 20 steps the value of x approaches its minimum at [0,0]. Progress is
+fairly well-behaved albeit rather slow.
+def f_2d(x1, x2): # Objective function
+return x1 ** 2 + 2 * x2 ** 2
+def f_2d_grad(x1, x2): # Gradient of the objective function
+return (2 * x1, 4 * x2)
+def gd_2d(x1, x2, s1, s2, f_grad):
+g1, g2 = f_grad(x1, x2)
+return (x1- eta * g1, x2- eta * g2, 0, 0)
+eta = 0.1
+show_trace_2d(f_2d, train_2d(gd_2d, f_grad=f_2d_grad))
+epoch 20, x1:-0.057646, x2:-0.000073
+488
+Optimization Algorithms
+12.3.3 Adaptive Methods
+As we could see in Section 12.3.1, getting the learning rate 𝜂 “just right” is tricky. If we
+pick it too small, we make little progress. If we pick it too large, the solution oscillates and
+in the worst case it might even diverge. What if we could determine 𝜂 automatically or get
+rid of having to select a learning rate at all? Second-order methods that look not only at the
+value and gradient of the objective function but also at its curvature can help in this case.
+While these methods cannot be applied to deep learning directly due to the computational
+cost, they provide useful intuition into how to design advanced optimization algorithms
+that mimic many of the desirable properties of the algorithms outlined below.
+Newton’s Method
+Reviewing the Taylor expansion of some function 𝑓 : R𝑑 → Rthereis noneedtostopafter
+the first term. In fact, we can write it as
+𝑓 (x +𝝐) = 𝑓(x) +𝝐 ∇𝑓(x) + 1
+2 𝝐 ∇2𝑓(x)𝝐 +O( 𝝐 3).
+To avoid cumbersome notation we define H def
+(12.3.8)
+= ∇2𝑓(x) to be the Hessian of 𝑓, which is
+a 𝑑 ×𝑑 matrix. For small 𝑑 and simple problems H is easy to compute. For deep neural
+networks, on the other hand, H may be prohibitively large, due to the cost of storing O(𝑑2)
+entries. Furthermore it may be too expensive to compute via backpropagation. For now
+let’s ignore such considerations and look at what algorithm we would get.
+After all, the minimum of 𝑓 satisfies ∇𝑓 = 0. Following calculus rules in Section 2.4.3, by
+taking derivatives of (12.3.8) with regard to 𝝐 and ignoring higher-order terms we arrive
+at
+∇𝑓 (x) +H𝝐 = 0andhence 𝝐 = −H−1∇𝑓(x).
+That is, we need to invert the Hessian H as part of the optimization problem.
+(12.3.9)
+As a simple example, for 𝑓 (𝑥) = 1
+2𝑥2 we have ∇𝑓 (𝑥) = 𝑥 and H = 1. Hence for any 𝑥
+we obtain 𝜖 = −𝑥. In other words, a single step is sufficient to converge perfectly without
+the need for any adjustment! Alas, we got a bit lucky here: the Taylor expansion was exact
+since 𝑓 (𝑥 + 𝜖) = 1
+2𝑥2 + 𝜖𝑥 + 1
+2𝜖2.
+Let’s see what happens in other problems. Given a convex hyperbolic cosine function
+𝑓 (𝑥) = cosh(𝑐𝑥) for some constant 𝑐, we can see that the global minimum at 𝑥 = 0 is
+reached after a few iterations.
+c = torch.tensor(0.5)
+def f(x): # Objective function
+return torch.cosh(c * x)
+def f_grad(x): # Gradient of the objective function
+return c * torch.sinh(c * x)
+(continues on next page)
+489
+Gradient Descent
+(continued from previous page)
+def f_hess(x): # Hessian of the objective function
+return c**2 * torch.cosh(c * x)
+def newton(eta=1):
+x = 10.0
+results = [x]
+for i in range(10):
+x-= eta * f_grad(x) / f_hess(x)
+results.append(float(x))
+print('epoch 10, x:', x)
+return results
+show_trace(newton(), f)
+epoch 10, x: tensor(0.)
+Now let’s consider a nonconvex function, such as 𝑓 (𝑥) = 𝑥 cos(𝑐𝑥) for some constant 𝑐.
+After all, note that in Newton’s method we end up dividing by the Hessian. This means that
+if the second derivative is negative we may walk into the direction of increasing the value
+of 𝑓. That is a fatal flaw of the algorithm. Let’s see what happens in practice.
+c = torch.tensor(0.15 * np.pi)
+def f(x): # Objective function
+return x * torch.cos(c * x)
+def f_grad(x): # Gradient of the objective function
+return torch.cos(c * x)- c * x * torch.sin(c * x)
+def f_hess(x): # Hessian of the objective function
+return- 2 * c * torch.sin(c * x)- x * c**2 * torch.cos(c * x)
+show_trace(newton(), f)
+epoch 10, x: tensor(26.8341)
+This went spectacularly wrong. How can we fix it? One way would be to “fix” the Hessian
+by taking its absolute value instead. Another strategy is to bring back the learning rate.
+490
+Optimization Algorithms
+This seems to defeat the purpose, but not quite. Having second-order information allows
+us to be cautious whenever the curvature is large and to take longer steps whenever the
+objective function is flatter. Let’s see how this works with a slightly smaller learning rate,
+say 𝜂 = 0.5. As we can see, we have quite an efficient algorithm.
+show_trace(newton(0.5), f)
+epoch 10, x: tensor(7.2699)
+Convergence Analysis
+We only analyze the convergence rate of Newton’s method for some convex and three times
+differentiable objective function 𝑓 , where the second derivative is nonzero, i.e., 𝑓 > 0.
+The multivariate proof is a straightforward extension of the one-dimensional argument be
+low and omitted since it does not help us much in terms of intuition.
+Denoteby𝑥(𝑘) thevalueof𝑥 atthe 𝑘th iterationandlet 𝑒(𝑘) def
+= 𝑥(𝑘)−𝑥∗ bethedistancefrom
+optimality at the 𝑘th iteration. By Taylor expansion we have that the condition 𝑓 (𝑥∗) = 0
+can be written as
+0 = 𝑓 (𝑥(𝑘) −𝑒(𝑘)) = 𝑓 (𝑥(𝑘)) − 𝑒(𝑘) 𝑓 (𝑥(𝑘)) + 1
+2 (𝑒(𝑘))2 𝑓 (𝜉(𝑘)),
+(12.3.10)
+which holds for some 𝜉(𝑘) ∈ [𝑥(𝑘) −𝑒(𝑘),𝑥(𝑘)]. Dividing the above expansion by 𝑓 (𝑥(𝑘))
+491
+Gradient Descent
+yields
+𝑒(𝑘) − 𝑓 (𝑥(𝑘))
+𝑓 (𝑥(𝑘)) = 1
+2 (𝑒(𝑘))2 𝑓 (𝜉(𝑘))
+𝑓 (𝑥(𝑘)) .
+(12.3.11)
+Recall that we have the update 𝑥(𝑘+1) = 𝑥(𝑘) − 𝑓 (𝑥(𝑘))/𝑓 (𝑥(𝑘)). Plugging in this update
+equation and taking the absolute value of both sides, we have
+𝑒(𝑘+1) = 1
+2 (𝑒(𝑘))2 𝑓 (𝜉(𝑘))
+𝑓 (𝑥(𝑘)) .
+(12.3.12)
+Consequently, whenever we are in a region of bounded 𝑓 (𝜉(𝑘)) /(2𝑓 (𝑥(𝑘))) ≤ 𝑐, we
+have a quadratically decreasing error
+𝑒(𝑘+1) ≤ 𝑐(𝑒(𝑘))2.
+(12.3.13)
+Asanaside, optimizationresearchers call this linear convergence, whereas a condition such
+as 𝑒(𝑘+1) ≤ 𝛼𝑒(𝑘) wouldbecalledaconstant rate of convergence. Note that this analysis
+comes with a number of caveats. First, we do not really have much of a guarantee when we
+will reach the region of rapid convergence. Instead, we only know that once we reach it,
+convergence will be very quick. Second, this analysis requires that 𝑓 is well-behaved up to
+higher-order derivatives. It comes down to ensuring that 𝑓 does not have any “surprising”
+properties in terms of how it might change its values.
+Preconditioning
+Quite unsurprisingly computing and storing the full Hessian is very expensive. It is thus
+desirable to find alternatives. One way to improve matters is preconditioning. It avoids
+computing the Hessian in its entirety but only computes the diagonal entries. This leads to
+update algorithms of the form
+x ←x−𝜂diag(H)−1∇𝑓(x).
+(12.3.14)
+While this is not quite as good as the full Newton’s method, it is still much better than not
+using it. To see why this might be a good idea consider a situation where one variable
+denotes height in millimeters and the other one denotes height in kilometers. Assuming
+that for both the natural scale is in meters, we have a terrible mismatch in parametrizations.
+Fortunately, using preconditioning removes this. Effectively preconditioning with gradient
+descent amounts to selecting a different learning rate for each variable (coordinate of vector
+x). Aswewillseelater, preconditioningdrivessomeoftheinnovationinstochasticgradient
+descent optimization algorithms.
+Gradient Descent with Line Search
+One of the key problems in gradient descent is that we might overshoot the goal or make
+insufficient progress. A simple fix for the problem is to use line search in conjunction with
+gradient descent. That is, we use the direction given by ∇𝑓 (x) and then perform binary
+search as to which learning rate 𝜂 minimizes 𝑓 (x − 𝜂∇𝑓 (x)).
+492
+Optimization Algorithms
+168
+This algorithm converges rapidly (for an analysis and proof see e.g., Boyd and Vanden
+berghe (2004)). However, for the purpose of deep learning this is not quite so feasible,
+since each step of the line search would require us to evaluate the objective function on the
+entire dataset. This is way too costly to accomplish.
+12.3.4 Summary
+• Learning rates matter. Too large and we diverge, too small and we do not make progress.
+• Gradient descent can get stuck in local minima.
+• In high dimensions adjusting the learning rate is complicated.
+• Preconditioning can help with scale adjustment.
+• Newton’s method is a lot faster once it has started working properly in convex problems.
+• Beware of using Newton’s method without any adjustments for nonconvex problems.
+12.3.5 Exercises
+1. Experiment with different learning rates and objective functions for gradient descent.
+2. Implement line search to minimize a convex function in the interval [𝑎, 𝑏].
+1. Do you need derivatives for binary search, i.e., to decide whether to pick [𝑎, (𝑎 +
+𝑏)/2] or [(𝑎 + 𝑏)/2,𝑏].
+2. Howrapid is the rate of convergence for the algorithm?
+3. Implement the algorithm and apply it to minimizing log(exp(𝑥) + exp(−2𝑥 − 3)).
+3. Design an objective function defined on R2 where gradient descent is exceedingly slow.
+Hint: scale different coordinates differently.
+4. Implement the lightweight version of Newton’s method using preconditioning:
+1. Use diagonal Hessian as preconditioner.
+2. Use the absolute values of that rather than the actual (possibly signed) values.
+3. Apply this to the problem above.
+5. Apply the algorithm above to a number of objective functions (convex or not). What
+happens if you rotate coordinates by 45 degrees?
+Discussions168.
+493
+Stochastic Gradient Descent
+12.4 Stochastic Gradient Descent
+In earlier chapters we kept using stochastic gradient descent in our training procedure, how
+ever, without explaining why it works. To shed some light on it, we just described the basic
+principles of gradient descent in Section 12.3. In this section, we go on to discuss stochastic
+gradient descent in greater detail.
+%matplotlib inline
+import math
+import torch
+from d2l import torch as d2l
+12.4.1 Stochastic Gradient Updates
+In deep learning, the objective function is usually the average of the loss functions for each
+example in the training dataset. Given a training dataset of 𝑛 examples, we assume that
+𝑓𝑖 (x) is the loss function with respect to the training example of index 𝑖, where x is the
+parameter vector. Then we arrive at the objective function
+𝑓 (x) = 1
+𝑛 
+�
+�
+𝑖=1 
+�
+�𝑖(x).
+The gradient of the objective function at x is computed as
+∇𝑓 (x) = 1
+𝑛 
+�
+�
+𝑖=1 
+∇𝑓𝑖(x).
+(12.4.1)
+(12.4.2)
+If gradient descent is used, the computational cost for each independent variable iteration
+is O(𝑛), which grows linearly with 𝑛. Therefore, when the training dataset is larger, the
+cost of gradient descent for each iteration will be higher.
+Stochastic gradient descent (SGD) reduces computational cost at each iteration. At each
+iteration of stochastic gradient descent, we uniformly sample an index 𝑖 ∈ {1, . . .,𝑛} for
+data examples at random, and compute the gradient ∇𝑓𝑖(x) to update x:
+x ←x−𝜂∇𝑓𝑖(x),
+(12.4.3)
+where 𝜂 is the learning rate. We can see that the computational cost for each iteration drops
+from O(𝑛) of the gradient descent to the constant O(1). Moreover, we want to empha
+size that the stochastic gradient ∇ 𝑓𝑖(x) is an unbiased estimate of the full gradient ∇𝑓 (x)
+because
+E𝑖∇𝑓𝑖(x) = 1
+𝑛 
+�
+�
+𝑖=1 
+∇𝑓𝑖(x) = ∇𝑓 (x).
+(12.4.4)
+Thismeansthat,onaverage,thestochasticgradientisagoodestimateofthegradient.
+Now, we will compare it with gradient descent by adding random noise with a mean of 0
+and a variance of 1 to the gradient to simulate a stochastic gradient descent.
+494
+Optimization Algorithms
+def f(x1, x2): # Objective function
+return x1 ** 2 + 2 * x2 ** 2
+def f_grad(x1, x2): # Gradient of the objective function
+return 2 * x1, 4 * x2
+def sgd(x1, x2, s1, s2, f_grad):
+g1, g2 = f_grad(x1, x2)
+# Simulate noisy gradient
+g1 += torch.normal(0.0, 1, (1,)).item()
+g2 += torch.normal(0.0, 1, (1,)).item()
+eta_t = eta * lr()
+return (x1- eta_t * g1, x2- eta_t * g2, 0, 0)
+def constant_lr():
+return 1
+eta = 0.1
+lr = constant_lr # Constant learning rate
+d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=50, f_grad=f_grad))
+epoch 50, x1: 0.225517, x2:-0.076646
+As we can see, the trajectory of the variables in the stochastic gradient descent is much
+more noisy than the one we observed in gradient descent in Section 12.3. This is due to
+the stochastic nature of the gradient. That is, even when we arrive near the minimum,
+we are still subject to the uncertainty injected by the instantaneous gradient via 𝜂∇𝑓𝑖(x).
+Even after 50 steps the quality is still not so good. Even worse, it will not improve after
+additional steps (we encourage you to experiment with a larger number of steps to confirm
+this). This leaves us with the only alternative: change the learning rate 𝜂. However, if we
+pick this too small, we will not make any meaningful progress initially. On the other hand,
+if we pick it too large, we will not get a good solution, as seen above. The only way to
+resolve these conflicting goals is to reduce the learning rate dynamically as optimization
+progresses.
+This is also the reason for adding a learning rate function lr into the sgd step function. In
+495
+Stochastic Gradient Descent
+the example above any functionality for learning rate scheduling lies dormant as we set the
+associated lr function to be constant.
+12.4.2 Dynamic Learning Rate
+Replacing 𝜂 with a time-dependent learning rate 𝜂(𝑡) adds to the complexity of controlling
+convergence of an optimization algorithm. In particular, we need to figure out how rapidly
+𝜂 should decay. If it is too quick, we will stop optimizing prematurely. If we decrease
+it too slowly, we waste too much time on optimization. The following are a few basic
+strategies that are used in adjusting 𝜂 over time (we will discuss more advanced strategies
+later):
+𝜂(𝑡) = 𝜂𝑖 if 𝑡𝑖 ≤ 𝑡 ≤ 𝑡𝑖+1 piecewise constant
+𝜂(𝑡) = 𝜂0 · 𝑒−𝜆𝑡
+exponential decay
+𝜂(𝑡) = 𝜂0 · (𝛽𝑡 + 1)−𝛼
+polynomial decay
+(12.4.5)
+In the first piecewise constant scenario we decrease the learningrate, e.g., wheneverprogress
+in optimization stalls. This is a common strategy for training deep networks. Alternatively
+we could decrease it much more aggressively by an exponential decay. Unfortunately this
+often leads to premature stopping before the algorithm has converged. A popular choice is
+polynomial decay with 𝛼 = 0.5. In the case of convex optimization there are a number of
+proofs that show that this rate is well behaved.
+Let’s see what the exponential decay looks like in practice.
+def exponential_lr():
+# Global variable that is defined outside this function and updated inside
+global t
+t += 1
+return math.exp(-0.1 * t)
+t = 1
+lr = exponential_lr
+d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=1000, f_grad=f_grad))
+epoch 1000, x1:-0.758829, x2:-0.115584
+As expected, the variance in the parameters is significantly reduced. However, this comes
+496
+Optimization Algorithms
+169
+at the expense of failing to converge to the optimal solution x = (0,0). Even after 1000
+iteration steps are we are still very far away from the optimalsolution. Indeed, the algorithm
+fails to converge at all. On the other hand, if we use a polynomial decay where the learning
+rate decays with the inverse square root of the number of steps, convergence gets better
+after only 50 steps.
+def polynomial_lr():
+# Global variable that is defined outside this function and updated inside
+global t
+t += 1
+return (1 + 0.1 * t) ** (-0.5)
+t = 1
+lr = polynomial_lr
+d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=50, f_grad=f_grad))
+epoch 50, x1: 0.144834, x2: 0.041688
+There exist many more choices for how to set the learning rate. For instance, we could start
+with a small rate, then rapidly ramp up and then decrease it again, albeit more slowly. We
+could even alternate between smaller and larger learning rates. There exists a large variety
+of such schedules. For now let’s focus on learning rate schedules for which a comprehen
+sive theoretical analysis is possible, i.e., on learning rates in a convex setting. For general
+nonconvex problems it is very difficult to obtain meaningful convergence guarantees, since
+in general minimizing nonlinear nonconvex problems is NP hard. For a survey see e.g., the
+excellent lecture notes169 of Tibshirani 2015.
+12.4.3 Convergence Analysis for Convex Objectives
+The following convergence analysis of stochastic gradient descent for convex objective
+functions is optional and primarily serves to convey more intuition about the problem. We
+limit ourselves to one of the simplest proofs (Nesterov and Vial, 2000). Significantly more
+advanced proof techniques exist, e.g., whenever the objective function is particularly well
+behaved.
+Suppose that the objective function 𝑓 (𝝃,x) is convex in x for all 𝝃. More concretely, we
+497
+Stochastic Gradient Descent
+consider the stochastic gradient descent update:
+x𝑡+1 = x𝑡 −𝜂𝑡𝜕x𝑓 (𝝃𝑡,x),
+(12.4.6)
+where 𝑓 (𝝃𝑡,x) is the objective function with respect to the training example 𝝃𝑡 drawn from
+some distribution at step 𝑡 and x is the model parameter. Denote by
+𝑅(x) = 𝐸𝝃[𝑓(𝝃,x)]
+(12.4.7)
+the expected risk and by 𝑅∗ its minimum with regard to x. Last let x∗ be the minimizer
+(we assume that it exists within the domain where x is defined). In this case we can track
+the distance between the current parameter x𝑡 at time 𝑡 and the risk minimizer x∗ and see
+whether it improves over time:
+x𝑡+1 − x∗ 2
+=x𝑡 −𝜂𝑡𝜕x𝑓(𝝃𝑡,x) −x∗ 2
+=x𝑡 −x∗ 2+𝜂2
+𝑡 𝜕x𝑓(𝝃𝑡,x) 2 −2𝜂𝑡 x𝑡 −x∗,𝜕x𝑓(𝝃𝑡,x) .
+(12.4.8)
+We assume that the ℓ2 norm of stochastic gradient 𝜕x 𝑓 (𝝃𝑡,x) is bounded by some constant
+𝐿, hence we have that
+𝜂2
+𝑡 𝜕x 𝑓 (𝝃𝑡,x) 2 ≤ 𝜂2
+𝑡𝐿2.
+(12.4.9)
+We are mostly interested in how the distance between x𝑡 and x∗ changes in expectation.
+In fact, for any specific sequence of steps the distance might well increase, depending on
+whichever 𝝃𝑡 we encounter. Hence we need to bound the dot product. Since for any convex
+function 𝑓 it holds that 𝑓 (y) ≥ 𝑓 (x) + 𝑓 (x),y − x for all x and y, by convexity we
+have
+𝑓 (𝝃𝑡, x∗) ≥ 𝑓 (𝝃𝑡,x𝑡) + x∗ −x𝑡,𝜕x 𝑓 (𝝃𝑡,x𝑡) .
+(12.4.10)
+Plugging both inequalities (12.4.9) and (12.4.10) into (12.4.8) we obtain a bound on the
+distance between parameters at time 𝑡 + 1 as follows:
+x𝑡 −x∗ 2 − x𝑡+1 −x∗ 2 ≥ 2𝜂𝑡(𝑓(𝝃𝑡,x𝑡) − 𝑓(𝝃𝑡,x∗)) −𝜂2
+𝑡𝐿2.
+(12.4.11)
+This means that we make progress as long as the difference between current loss and the
+optimal loss outweighs 𝜂𝑡𝐿2/2. Since this difference is bound to converge to zero it follows
+that the learning rate 𝜂𝑡 also needs to vanish.
+Next we take expectations over (12.4.11). This yields
+𝐸 x𝑡−x∗ 2 −𝐸 x𝑡+1−x∗ 2 ≥2𝜂𝑡[𝐸[𝑅(x𝑡)]−𝑅∗] −𝜂2
+𝑡𝐿2.
+(12.4.12)
+The last step involves summing over the inequalities for 𝑡 ∈ {1,. . .,𝑇}. Since the sum
+telescopes and by dropping the lower term we obtain
+𝑇
+x1 −x∗ 2 ≥ 2
+𝑡=1
+𝑇
+𝜂𝑡 [𝐸[𝑅(x𝑡)] − 𝑅∗] − 𝐿2
+𝑡=1
+𝜂2
+𝑡 .
+(12.4.13)
+498
+Optimization Algorithms
+Note that we exploited that x1 is given and thus the expectation can be dropped. Last
+define
+𝑇
+¯
+x def
+=
+Since
+𝑇
+𝐸
+𝑡=1 𝜂𝑡𝑅(x𝑡)
+𝑇
+𝑇
+𝑡=1 𝜂𝑡x𝑡
+𝑇
+𝑡=1 𝜂𝑡 
+.
+𝑡=1 𝜂𝑡
+=
+𝑡=1 𝜂𝑡𝐸[𝑅(x𝑡)]
+𝑇
+𝑡=1 𝜂𝑡
+(12.4.14)
+= 𝐸[𝑅(x𝑡)],
+(12.4.15)
+by Jensen’s inequality (setting 𝑖 = 𝑡, 𝛼𝑖 = 𝜂𝑡/ 𝑇
+𝑡=1 𝜂𝑡 in (12.2.3)) and convexity of 𝑅 it
+follows that 𝐸[𝑅(x𝑡)] ≥ 𝐸[𝑅(¯x)], thus
+𝑇
+𝑡=1
+𝑇
+𝜂𝑡𝐸[𝑅(x𝑡)] ≥
+𝑡=1
+𝜂𝑡𝐸 [𝑅(¯x)] .
+Plugging this into the inequality (12.4.13) yields the bound
+[𝐸[¯x]] − 𝑅∗ ≤ 𝑟2 + 𝐿2 𝑇
+𝑡=1𝜂2 𝑡
+2 𝑇
+𝑡=1 𝜂𝑡 
+,
+where 𝑟2 def
+(12.4.16)
+(12.4.17)
+= x1−x∗ 2 is a bound on the distance between the initial choice of parameters
+and the final outcome. In short, the speed of convergence depends on how the norm of
+stochastic gradient is bounded (𝐿) and how far away from optimality the initial parameter
+value is (𝑟). Note that the bound is in terms of ¯x rather than x𝑇. This is the case since ¯x is
+a smoothed version of the optimization path. Whenever 𝑟, 𝐿, and 𝑇 are known we can pick
+the learning rate 𝜂 = 𝑟/(𝐿√𝑇). This yields as upper bound 𝑟𝐿/√𝑇. That is, we converge
+with rate O(1/√𝑇) to the optimal solution.
+12.4.4 Stochastic Gradients and Finite Samples
+So far we have played a bit fast and loose when it comes to talking about stochastic gra
+dient descent. We posited that we draw instances 𝑥𝑖, typically with labels 𝑦𝑖 from some
+distribution 𝑝(𝑥, 𝑦) and that we use this to update the model parameters in some man
+ner. In particular, for a finite sample size we simply argued that the discrete distribution
+𝑝(𝑥, 𝑦) = 1
+𝑛 
+�
+�
+𝑖=1 𝛿𝑥𝑖
+(𝑥)𝛿𝑦𝑖
+(𝑦) for some functions 𝛿𝑥𝑖 
+and 𝛿𝑦𝑖 
+allows us to perform stochas
+tic gradient descent over it.
+However, this is not really what we did. In the toy examples in the current section we
+simply added noise to an otherwise non-stochastic gradient, i.e., we pretended to have pairs
+(𝑥𝑖, 𝑦𝑖). It turns out that this is justified here (see the exercises for a detailed discussion).
+More troubling is that in all previous discussions we clearly did not do this. Instead we
+iterated over all instances exactly once. To see why this is preferable consider the converse,
+namely that we are sampling 𝑛 observations from the discrete distribution withreplacement.
+The probability of choosing an element 𝑖 at random is 1/𝑛. Thus to choose it at least once
+is
+𝑃(choose 𝑖) = 1 − 𝑃(omit 𝑖) = 1− (1−1/𝑛)𝑛 ≈ 1−𝑒−1 ≈ 0.63.
+(12.4.18)
+499
+Stochastic Gradient Descent
+170
+A similar reasoning shows that the probability of picking some sample (i.e., training exam
+ple) exactly once is given by
+𝑛
+1
+(12.4.19)
+1
+𝑛 1− 1
+𝑛
+𝑛−1 
+= 𝑛
+𝑛 −1 1− 1
+𝑛
+𝑛 
+≈𝑒−1 ≈0.37.
+Sampling with replacement leads to an increased variance and decreased data efficiency
+relative to sampling without replacement. Hence, in practice we perform the latter (and
+this is the default choice throughout this book). Last note that repeated passes through the
+training dataset traverse it in a different random order.
+12.4.5 Summary
+• For convex problems we can prove that for a wide choice of learning rates stochastic
+gradient descent will converge to the optimal solution.
+• For deep learning this is generally not the case. However, the analysis of convex prob
+lems gives us useful insight into how to approach optimization, namely to reduce the
+learning rate progressively, albeit not too quickly.
+• Problems occur when the learning rate is too small or too large. In practice a suitable
+learning rate is often found only after multiple experiments.
+• When there are more examples in the training dataset, it costs more to compute each
+iteration for gradient descent, so stochastic gradient descent is preferred in these cases.
+• Optimality guarantees for stochastic gradient descent are in general not available in non
+convex cases since the number of local minima that require checking might well be
+exponential.
+12.4.6 Exercises
+1. Experiment with different learning rate schedules for stochastic gradient descent and
+with different numbers of iterations. In particular, plot the distance from the optimal
+solution (0, 0) as a function of the number of iterations.
+2. Prove that for the function 𝑓 (𝑥1,𝑥2) = 𝑥2
+1 + 2𝑥2
+2 adding normal noise to the gradient is
+equivalent to minimizing a loss function 𝑓 (x,w) = (𝑥1 − 𝑤1)2 + 2(𝑥2 − 𝑤2)2 where x
+is drawn from a normal distribution.
+3. Compareconvergenceofstochasticgradientdescentwhenyousamplefrom{(𝑥1, 𝑦1), . . ., (𝑥𝑛, 𝑦𝑛)}
+with replacement and when you sample without replacement.
+4. Howwouldyouchangethestochastic gradient descent solver if some gradient (or rather
+some coordinate associated with it) was consistently larger than all the other gradients?
+5. Assume that 𝑓 (𝑥) = 𝑥2(1 + sin𝑥). How many local minima does 𝑓 have? Can you
+change 𝑓 in such a way that to minimize it one needs to evaluate all the local minima?
+Discussions170.
+500
+Optimization Algorithms
+12.5 Minibatch Stochastic Gradient Descent
+So far we encountered two extremes in the approach to gradient-based learning: Section
+12.3 uses the full dataset to compute gradients and to update parameters, one pass at a time.
+Conversely Section 12.4 processes one training example at a time to make progress. Either
+of them has its own drawbacks. Gradient descent is not particularly data efficient whenever
+data is very similar. Stochastic gradient descent is not particularly computationally efficient
+since CPUs and GPUs cannot exploit the full power of vectorization. This suggests that
+there might be something in between, and in fact, that is what we have been using so far in
+the examples we discussed.
+12.5.1 Vectorization and Caches
+At the heart of the decision to use minibatches is computational efficiency. This is most
+easily understood when considering parallelization to multiple GPUs and multiple servers.
+In this case we need to send at least one image to each GPU. With 8 GPUs per server and
+16 servers we already arrive at a minibatch size no smaller than 128.
+Things are a bit more subtle when it comes to single GPUs or even CPUs. These devices
+have multiple types of memory, often multiple types of computational units and different
+bandwidth constraints between them. For instance, a CPU has a small number of registers
+and then the L1, L2, and in some cases even L3 cache (which is shared among different
+processor cores). These caches are of increasing size and latency (and at the same time
+they are of decreasing bandwidth). Suffice to say, the processor is capable of performing
+many more operations than what the main memory interface is able to provide.
+First, a 2GHz CPU with 16 cores and AVX-512 vectorization can process up to 2 · 109 ·
+16 · 32 = 1012 bytes per second. The capability of GPUs easily exceeds this number by a
+factor of 100. On the other hand, a midrange server processor might not have much more
+than 100 GB/s bandwidth, i.e., less than one tenth of what would be required to keep the
+processor fed. To make matters worse, not all memory access is created equal: memory
+interfaces are typically 64 bit wide or wider (e.g., on GPUs up to 384 bit), hence reading a
+single byte incurs the cost of a much wider access.
+171
+Second, there is significant overhead for the first access whereas sequential access is rela
+tively cheap (this is often called a burst read). There are many more things to keep in mind,
+such as caching when we have multiple sockets, chiplets, and other structures. See this
+Wikipedia article171 for a more in-depth discussion.
+The way to alleviate these constraints is to use a hierarchy of CPU caches that are actu
+ally fast enough to supply the processor with data. This is the driving force behind batch
+ing in deep learning. To keep matters simple, consider matrix-matrix multiplication, say
+A=BC. Wehaveanumber of options for calculating A. For instance, we could try the
+following:
+501
+Minibatch Stochastic Gradient Descent
+1. We could compute A𝑖𝑗 = B𝑖,:C:,𝑗, i.e., we could compute it elementwise by means of
+dot products.
+2. We could compute A:,𝑗 = BC:,𝑗, i.e., we could compute it one column at a time.
+Likewise we could compute A one row A𝑖,: at a time.
+3. Wecould simply compute A = BC.
+4. We could break B and C into smaller block matrices and compute A one block at a
+time.
+If we follow the first option, we will need to copy one row and one column vector into the
+CPU each time wewant to compute an element A𝑖𝑗. Evenworse,duetothefactthatmatrix
+elements are aligned sequentially we are thus required to access many disjoint locations
+for one of the two vectors as we read them from memory. The second option is much
+more favorable. In it, we are able to keep the column vector C:,𝑗 in the CPU cache while
+we keep on traversing through B. This halves the memory bandwidth requirement with
+correspondingly faster access. Of course, option 3 is most desirable. Unfortunately, most
+matrices might not entirely fit into cache (this is what we are discussing after all). However,
+option 4 offers a practically useful alternative: we can move blocks of the matrix into cache
+and multiply them locally. Optimized libraries take care of this for us. Let’s have a look at
+how efficient these operations are in practice.
+Beyond computational efficiency, the overhead introduced by Python andbythedeeplearn
+ing framework itself is considerable. Recall that each time we execute a command the
+Python interpreter sends a command to the MXNet engine which needs to insert it into
+the computational graph and deal with it during scheduling. Such overhead can be quite
+detrimental. In short, it is highly advisable to use vectorization (and matrices) whenever
+possible.
+%matplotlib inline
+import time
+import numpy as np
+import torch
+from torch import nn
+from d2l import torch as d2l
+A = torch.zeros(256, 256)
+B = torch.randn(256, 256)
+C = torch.randn(256, 256)
+Since we will benchmark the running time frequently in the rest of the book, let’s define a
+timer.
+class Timer: #@save
+"""Record multiple running times."""
+def __init__(self):
+self.times = []
+self.start()
+(continues on next page)
+502
+Optimization Algorithms
+(continued from previous page)
+def start(self):
+"""Start the timer."""
+self.tik = time.time()
+def stop(self):
+"""Stop the timer and record the time in a list."""
+self.times.append(time.time()- self.tik)
+return self.times[-1]
+def avg(self):
+"""Return the average time."""
+return sum(self.times) / len(self.times)
+def sum(self):
+"""Return the sum of time."""
+return sum(self.times)
+def cumsum(self):
+"""Return the accumulated time."""
+return np.array(self.times).cumsum().tolist()
+timer = Timer()
+Element-wiseassignmentsimply iteratesover all rowsandcolumns ofBandCrespectively
+to assign the value to A.
+# Compute A = BC one element at a time
+timer.start()
+for i in range(256):
+for j in range(256):
+A[i, j] = torch.dot(B[i, :], C[:, j])
+timer.stop()
+1.7845737934112549
+Afaster strategy is to perform column-wise assignment.
+# Compute A = BC one column at a time
+timer.start()
+for j in range(256):
+A[:, j] = torch.mv(B, C[:, j])
+timer.stop()
+0.06541275978088379
+Last, the most effective manner is to perform the entire operation in one block. Note that
+multiplying any two matrices B ∈ R𝑚×𝑛 and C ∈ R𝑛×𝑝 takes approximately2𝑚𝑛𝑝 floating
+point operations, whenscalarmultiplication andadditionarecountedasseparateoperations
+503
+Minibatch Stochastic Gradient Descent
+(fused in practice). Thus, multiplying two 256 × 256 matrices takes 0.03 billion floating
+point operations. Let’s see what the respective speed of the operations is.
+# Compute A = BC in one go
+timer.start()
+A = torch.mm(B, C)
+timer.stop()
+gigaflops = [0.03 / i for i in timer.times]
+print(f'performance in Gigaflops: element {gigaflops[0]:.3f}, '
+f'column {gigaflops[1]:.3f}, full {gigaflops[2]:.3f}')
+performance in Gigaflops: element 0.017, column 0.459, full 51.633
+12.5.2 Minibatches
+In the past we took it for granted that we would read minibatches of data rather than single
+observations to update parameters. We now give a brief justification for it. Processing sin
+gle observations requires us to perform many single matrix-vector (or even vector-vector)
+multiplications, which is quite expensive and which incurs a significant overhead on behalf
+of the underlying deep learning framework. This applies both to evaluating a network when
+applied to data (often referred to as inference) and when computing gradients to update pa
+rameters. That is, this applies whenever we perform w ← w − 𝜂𝑡g𝑡 where
+g𝑡 = 𝜕w𝑓(x𝑡,w)
+(12.5.1)
+We can increase the computational efficiency of this operation by applying it to a minibatch
+of observations at a time. That is, we replace the gradient g𝑡 over a single observation by
+one over a small batch
+g𝑡 = 𝜕w 
+1
+|B𝑡| 𝑖∈B𝑡 
+�
+� (x𝑖,w)
+(12.5.2)
+Let’s see whatthis doestothestatistical properties of g𝑡: since both x𝑡 and also all elements
+of the minibatch B𝑡 are drawn uniformly at random from the training set, the expectation of
+the gradient remains unchanged. The variance, on the other hand, is reduced significantly.
+Since the minibatch gradient is composed of 𝑏 def
+= |B𝑡| independent gradients which are
+being averaged, its standard deviation is reduced by a factor of 𝑏−1
+2 . This, byitself, is a good
+thing, since it meansthattheupdatesaremorereliablyalignedwiththefullgradient.
+Naively this would indicate that choosing a large minibatch B𝑡 would be universally desir
+able. Alas, after some point, the additional reduction in standard deviation is minimal when
+compared to the linear increase in computational cost. In practice we pick a minibatch that
+is large enough to offer good computational efficiency while still fitting into the memory of
+a GPU. To illustrate the savings let’s have a look at some code. In it we perform the same
+matrix-matrix multiplication, but this time broken up into “minibatches” of 64 columns at
+a time.
+504
+Optimization Algorithms
+172
+timer.start()
+for j in range(0, 256, 64):
+A[:, j:j+64] = torch.mm(B, C[:, j:j+64])
+timer.stop()
+print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
+performance in Gigaflops: block 37.640
+As we can see, the computation on the minibatch is essentially as efficient as on the full
+matrix. A word of caution is in order. In Section 8.5 we used a type of regularization that
+was heavily dependent on the amount of variance in a minibatch. As we increase the latter,
+the variance decreases and with it the benefit of the noise-injection due to batch normal
+ization. See e.g., Ioffe (2017) for details on how to rescale and compute the appropriate
+terms.
+12.5.3 Reading the Dataset
+Let’s have a look at how minibatches are efficiently generated from data. In the following
+we use a dataset developed by NASA to test the wing noise from different aircraft 172
+to compare these optimization algorithms. For convenience we only use the first 1,500
+examples. The data is whitened for preprocessing, i.e., we remove the mean and rescale the
+variance to 1 per coordinate.
+#@save
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+'76e5be1548fd8222e5074cf0faae75edff8cf93f')
+#@save
+def get_data_ch11(batch_size=10, n=1500):
+data = np.genfromtxt(d2l.download('airfoil'),
+dtype=np.float32, delimiter='\t')
+data = torch.from_numpy((data- data.mean(axis=0)) / data.std(axis=0))
+data_iter = d2l.load_array((data[:n, :-1], data[:n,-1]),
+batch_size, is_train=True)
+return data_iter, data.shape[1]-1
+12.5.4 Implementation from Scratch
+Recall the minibatch stochastic gradient descent implementation from Section 3.4. In the
+following we provide a slightly more general implementation. For convenience it has the
+same call signature as the other optimization algorithms introduced later in this chapter.
+Specifically, we add the status input states and place the hyperparameter in dictionary
+hyperparams. In addition, we will average the loss of each minibatch example in the train
+ing function, so the gradient in the optimization algorithm does not need to be divided by
+the batch size.
+505
+Minibatch Stochastic Gradient Descent
+def sgd(params, states, hyperparams):
+for p in params:
+p.data.sub_(hyperparams['lr'] * p.grad)
+p.grad.data.zero_()
+Next, weimplementagenerictrainingfunctiontofacilitate the use of theother optimization
+algorithms introduced later in this chapter. It initializes a linear regression model and can
+be used to train the model with minibatch stochastic gradient descent and other algorithms
+introduced subsequently.
+#@save
+def train_ch11(trainer_fn, states, hyperparams, data_iter,
+feature_dim, num_epochs=2):
+# Initialization
+w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
+requires_grad=True)
+b = torch.zeros((1), requires_grad=True)
+net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
+# Train
+animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+xlim=[0, num_epochs], ylim=[0.22, 0.35])
+n, timer = 0, d2l.Timer()
+for _ in range(num_epochs):
+for X, y in data_iter:
+l = loss(net(X), y).mean()
+l.backward()
+trainer_fn([w, b], states, hyperparams)
+n += X.shape[0]
+if n % 200 == 0:
+timer.stop()
+animator.add(n/X.shape[0]/len(data_iter),
+(d2l.evaluate_loss(net, data_iter, loss),))
+timer.start()
+print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/
+↩→epoch')
+return timer.cumsum(), animator.Y[0]
+Let’s see how optimization proceeds for batch gradient descent. This can be achieved by
+setting the minibatch size to 1500 (i.e., to the total number of examples). As a result the
+model parameters are updated only once per epoch. There is little progress. In fact, after 6
+steps progress stalls.
+def train_sgd(lr, batch_size, num_epochs=2):
+data_iter, feature_dim = get_data_ch11(batch_size)
+return train_ch11(
+sgd, None, {'lr': lr}, data_iter, feature_dim, num_epochs)
+gd_res = train_sgd(1, 1500, 10)
+loss: 0.247, 0.020 sec/epoch
+506
+Optimization Algorithms
+When the batch size equals 1, we use stochastic gradient descent for optimization. For
+simplicity of implementation we picked a constant (albeit small) learning rate. In stochastic
+gradient descent, the model parameters are updated whenever an example is processed. In
+our case this amounts to 1500 updates per epoch. As we can see, the decline in the value of
+the objective function slows down after one epoch. Althoughboththeproceduresprocessed
+1500 examples within one epoch, stochastic gradient descent consumes more time than
+gradient descent in our experiment. This is because stochastic gradient descent updated
+the parameters more frequently and since it is less efficient to process single observations
+one at a time.
+sgd_res = train_sgd(0.005, 1)
+loss: 0.245, 0.685 sec/epoch
+Finally, when the batch size equals 100, we use minibatch stochastic gradient descent for
+optimization. The time required per epoch is shorter than the time needed for stochastic
+gradient descent and the time for batch gradient descent.
+mini1_res = train_sgd(.4, 100)
+loss: 0.246, 0.025 sec/epoch
+Reducing the batch size to 10, the time for each epoch increases because the workload for
+each batch is less efficient to execute.
+507
+Minibatch Stochastic Gradient Descent
+mini2_res = train_sgd(.05, 10)
+loss: 0.246, 0.090 sec/epoch
+Now we can compare the time vs. loss for the previous four experiments. As can be seen,
+although stochastic gradient descent converges faster than GD in terms of number of ex
+amples processed, it uses more time to reach the same loss than GD because computing the
+gradient example by example is not as efficient. Minibatch stochastic gradient descent is
+able to trade-off convergence speed and computation efficiency. A minibatch size of 10 is
+more efficient than stochastic gradient descent; a minibatch size of 100 even outperforms
+GD in terms of runtime.
+d2l.set_figsize([6, 3])
+d2l.plot(*list(map(list, zip(gd_res, sgd_res, mini1_res, mini2_res))),
+'time (sec)', 'loss', xlim=[1e-2, 10],
+legend=['gd', 'sgd', 'batch size=100', 'batch size=10'])
+d2l.plt.gca().set_xscale('log')
+12.5.5 Concise Implementation
+In Gluon, we can use the Trainer class to call optimization algorithms. This is used to im
+plement ageneric training function. Wewill use this throughout the current chapter.
+508
+Optimization Algorithms
+#@save
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=4):
+# Initialization
+net = nn.Sequential(nn.Linear(5, 1))
+def init_weights(module):
+if type(module) == nn.Linear:
+torch.nn.init.normal_(module.weight, std=0.01)
+net.apply(init_weights)
+optimizer = trainer_fn(net.parameters(), **hyperparams)
+loss = nn.MSELoss(reduction='none')
+animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+xlim=[0, num_epochs], ylim=[0.22, 0.35])
+n, timer = 0, d2l.Timer()
+for _ in range(num_epochs):
+for X, y in data_iter:
+optimizer.zero_grad()
+out = net(X)
+y = y.reshape(out.shape)
+l = loss(out, y)
+l.mean().backward()
+optimizer.step()
+n += X.shape[0]
+if n % 200 == 0:
+timer.stop()
+# `MSELoss` computes squared error without the 1/2 factor
+animator.add(n/X.shape[0]/len(data_iter),
+(d2l.evaluate_loss(net, data_iter, loss) / 2,))
+timer.start()
+print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/
+↩→epoch')
+Using Gluon to repeat the last experiment shows identical behavior.
+data_iter, _ = get_data_ch11(10)
+trainer = torch.optim.SGD
+train_concise_ch11(trainer, {'lr': 0.01}, data_iter)
+509
+Minibatch Stochastic Gradient Descent
+loss: 0.243, 0.096 sec/epoch
+12.5.6 Summary
+• Vectorization makes code more efficient due to reduced overhead arising from the deep
+learning framework and due to better memory locality and caching on CPUs and
+GPUs.
+• Thereisatrade-off between statistical efficiency arising from stochastic gradient descent
+and computational efficiency arising from processing large batches of data at a time.
+• Minibatch stochastic gradient descent offers the best of both worlds: computational and
+statistical efficiency.
+• Inminibatchstochasticgradient descent weprocessbatchesofdataobtainedbyarandom
+permutation of the training data (i.e., each observation is processed only once per
+epoch, albeit in random order).
+• It is advisable to decay the learning rates during training.
+• Ingeneral, minibatchstochasticgradient descent isfaster than stochastic gradient descent
+and gradient descent for convergence to a smaller risk, when measured in terms of
+clock time.
+12.5.7 Exercises
+1. Modify the batch size and learning rate and observe the rate of decline for the value of
+the objective function and the time consumed in each epoch.
+2. Read the MXNet documentation and use the Trainer class set_learning_rate func
+tion to reduce the learning rate of the minibatch stochastic gradient descent to 1/10 of
+its previous value after each epoch.
+3. Compareminibatchstochastic gradient descent with a variant that actually samples with
+replacement from the training set. What happens?
+4. An evil genie replicates your dataset without telling you (i.e., each observation occurs
+twice and your dataset grows to twice its original size, but nobody told you). How does
+510
+Optimization Algorithms
+173
+the behavior of stochastic gradient descent, minibatch stochastic gradient descent and
+that of gradient descent change?
+Discussions173.
+12.6 Momentum
+In Section 12.4 we reviewed what happens when performing stochastic gradient descent,
+i.e., when performing optimization where only a noisy variant of the gradient is available.
+In particular, we noticed that for noisy gradients we need to be extra cautious when it comes
+to choosing the learning rate in the face of noise. If we decrease it too rapidly, convergence
+stalls. If we are too lenient, we fail to converge to a good enough solution since noise keeps
+on driving us away from optimality.
+12.6.1 Basics
+In this section, we will explore more effective optimization algorithms, especially for cer
+tain types of optimization problems that are common in practice.
+Leaky Averages
+The previous section saw us discussing minibatch SGD as a means for accelerating com
+putation. It also had the nice side-effect that averaging gradients reduced the amount of
+variance. The minibatch stochastic gradient descent can be calculated by:
+g𝑡,𝑡−1 = 𝜕w 
+1
+|B𝑡| 𝑖∈B𝑡 
+�
+� (x𝑖,w𝑡−1) = 1
+|B𝑡| 𝑖∈B𝑡 
+h𝑖,𝑡−1.
+(12.6.1)
+To keep the notation simple, here we used h𝑖,𝑡−1 = 𝜕w 𝑓 (x𝑖,w𝑡−1) as the stochastic gra
+dient descent for sample 𝑖 using the weights updated at time 𝑡 − 1. It would be nice if we
+could benefit from the effect of variance reduction even beyond averaging gradients on a
+minibatch. One option to accomplish this task is to replace the gradient computation by a
+“leaky average”:
+v𝑡 = 𝛽v𝑡−1 +g𝑡,𝑡−1
+(12.6.2)
+for some 𝛽 ∈ (0,1). This effectively replaces the instantaneous gradient by one that is been
+averaged over multiple past gradients. v is called velocity. It accumulates past gradients
+similar to how a heavy ball rolling down the objective function landscape integrates over
+past forces. To see what is happening in more detail let’s expand v𝑡 recursively into
+𝑡−1
+v𝑡 = 𝛽2v𝑡−2 + 𝛽g𝑡−1,𝑡−2 + g𝑡,𝑡−1 = ...,=
+𝜏=0
+𝛽𝜏g𝑡−𝜏,𝑡−𝜏−1.
+(12.6.3)
+Large 𝛽 amounts to a long-range average, whereas small 𝛽 amounts to only a slight correc
+tion relative to a gradient method. The new gradient replacement no longer points into the
+511
+Momentum
+174
+direction of steepest descent on a particular instance any longer but rather in the direction
+of a weighted average of past gradients. This allows us to realize most of the benefits of
+averaging over a batch without the cost of actually computing the gradients on it. We will
+revisit this averaging procedure in more detail later.
+The above reasoning formed the basis for what is now known as accelerated gradient meth
+ods, such as gradients with momentum. They enjoy the additional benefit of being much
+more effective in cases where the optimization problem is ill-conditioned (i.e., where there
+are some directions where progress is much slower than in others, resembling a narrow
+canyon). Furthermore, they allow us to average over subsequent gradients to obtain more
+stable directions of descent. Indeed, the aspect of acceleration even for noise-free convex
+problems is one of the key reasons why momentum works and why it works so well.
+Asonewouldexpect,duetoitsefficacymomentumisawell-studiedsubjectinoptimization
+for deep learning and beyond. See e.g., the beautiful expository article174 by Goh (2017)
+for an in-depth analysis and interactive animation. It was proposed by Polyak (1964). Nes
+terov (2018) has a detailed theoretical discussion in the context of convex optimization.
+Momentum in deep learning has been known to be beneficial for a long time. See e.g., the
+discussion by Sutskever et al. (2013) for details.
+An Ill-conditioned Problem
+To get a better understanding of the geometric properties of the momentum method we
+revisit gradient descent, albeit with a significantly less pleasant objective function. Recall
+that in Section 12.3 we used 𝑓 (x) = 𝑥2
+1+2𝑥2
+2, i.e., a moderately distorted ellipsoid objective.
+We distort this function further by stretching it out in the 𝑥1 direction via
+𝑓 (x) = 0.1𝑥2
+1 + 2𝑥2
+2.
+(12.6.4)
+As before 𝑓 has its minimum at (0,0). This function is very flat in the direction of 𝑥1. Let’s
+see what happens when we perform gradient descent as before on this new function. We
+pick a learning rate of 0.4.
+%matplotlib inline
+import torch
+from d2l import torch as d2l
+eta = 0.4
+def f_2d(x1, x2):
+return 0.1 * x1 ** 2 + 2 * x2 ** 2
+def gd_2d(x1, x2, s1, s2):
+return (x1- eta * 0.2 * x1, x2- eta * 4 * x2, 0, 0)
+d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
+epoch 20, x1:-0.943467, x2:-0.000073
+By construction, the gradient in the 𝑥2 direction is much higher and changes much more
+512
+Optimization Algorithms
+rapidly than in the horizontal 𝑥1 direction. Thus we are stuck between two undesirable
+choices: if we pick a small learning rate we ensure that the solution does not diverge in
+the 𝑥2 direction but we are saddled with slow convergence in the 𝑥1 direction. Conversely,
+with a large learning rate we progress rapidly in the 𝑥1 direction but diverge in 𝑥2. The
+example below illustrates what happens even after a slight increase in learning rate from
+0.4 to 0.6. Convergencein the 𝑥1 direction improves but the overall solution quality is much
+worse.
+eta = 0.6
+d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
+epoch 20, x1:-0.387814, x2:-1673.365109
+The Momentum Method
+The momentum method allows us to solve the gradient descent problem described above.
+Looking at the optimization trace above we might intuit that averaging gradients over the
+past would work well. After all, in the 𝑥1 direction this will aggregate well-aligned gradi
+ents, thus increasing the distance we cover with every step. Conversely, in the 𝑥2 direction
+where gradients oscillate, an aggregate gradient will reduce step size due to oscillations
+that cancel each other out. Using v𝑡 instead of the gradient g𝑡 yields the following update
+equations:
+v𝑡 ← 𝛽v𝑡−1 +g𝑡,𝑡−1,
+x𝑡 ←x𝑡−1 −𝜂𝑡v𝑡.
+(12.6.5)
+513
+Momentum
+Note that for 𝛽 = 0 we recover regular gradient descent. Before delving deeper into the
+mathematical properties let’s have a quick look at how the algorithm behaves in prac
+tice.
+def momentum_2d(x1, x2, v1, v2):
+v1 = beta * v1 + 0.2 * x1
+v2 = beta * v2 + 4 * x2
+return x1- eta * v1, x2- eta * v2, v1, v2
+eta, beta = 0.6, 0.5
+d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d))
+epoch 20, x1: 0.007188, x2: 0.002553
+As we can see, even with the same learning rate that we used before, momentum still con
+verges well. Let’s see what happens when we decrease the momentum parameter. Halving
+it to 𝛽 = 0.25 leads to a trajectory that barely converges at all. Nonetheless, it is a lot better
+than without momentum (when the solution diverges).
+eta, beta = 0.6, 0.25
+d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d))
+epoch 20, x1:-0.126340, x2:-0.186632
+Note that we can combine momentum with stochastic gradient descent and in particular,
+minibatch stochastic gradient descent. The only change is that in that case we replace the
+514
+Optimization Algorithms
+gradients g𝑡,𝑡−1 with g𝑡. Last, for convenience we initialize v0 = 0 at time 𝑡 = 0. Let’s
+look at what leaky averaging actually does to the updates.
+Effective Sample Weight
+Recall that v𝑡 = 𝑡−1
+𝜏=0 𝛽𝜏g𝑡−𝜏,𝑡−𝜏−1. In the limit the terms add up to ∞
+𝜏=0 𝛽𝜏 = 1
+1−𝛽. In
+other words, rather than taking a step of size 𝜂 in gradient descent or stochastic gradient
+descent we take a step of size 𝜂
+1−𝛽 while at the same time, dealing with a potentially much
+better behaved descent direction. These are two benefits in one. To illustrate how weighting
+behaves for different choices of 𝛽 consider the diagram below.
+d2l.set_figsize()
+betas = [0.95, 0.9, 0.6, 0]
+for beta in betas:
+x = torch.arange(40).detach().numpy()
+d2l.plt.plot(x, beta ** x, label=f'beta = {beta:.2f}')
+d2l.plt.xlabel('time')
+d2l.plt.legend();
+12.6.2 Practical Experiments
+Let’s see how momentum works in practice, i.e., when used within the context of a proper
+optimizer. For this we need a somewhat more scalable implementation.
+Implementation from Scratch
+Compared with (minibatch) stochastic gradient descent the momentum method needs to
+maintain a set of auxiliary variables, i.e., velocity. It has the same shape as the gradients
+(and variables of the optimization problem). In the implementation below we call these
+variables states.
+def init_momentum_states(feature_dim):
+v_w = torch.zeros((feature_dim, 1))
+v_b = torch.zeros(1)
+return (v_w, v_b)
+515
+Momentum
+def sgd_momentum(params, states, hyperparams):
+for p, v in zip(params, states):
+with torch.no_grad():
+v[:] = hyperparams['momentum'] * v + p.grad
+p[:]-= hyperparams['lr'] * v
+p.grad.data.zero_()
+Let’s see how this works in practice.
+def train_momentum(lr, momentum, num_epochs=2):
+d2l.train_ch11(sgd_momentum, init_momentum_states(feature_dim),
+{'lr': lr, 'momentum': momentum}, data_iter,
+feature_dim, num_epochs)
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+train_momentum(0.02, 0.5)
+loss: 0.245, 0.153 sec/epoch
+Whenwe increase the momentum hyperparameter momentum to 0.9, it amounts to a signif
+icantly larger effective sample size of 1
+1−0.9 = 10. We reduce the learning rate slightly to
+0.01 to keep matters under control.
+train_momentum(0.01, 0.9)
+loss: 0.248, 0.109 sec/epoch
+Reducing the learning rate further addresses any issue of non-smooth optimization prob
+lems. Setting it to 0.005 yields good convergence properties.
+train_momentum(0.005, 0.9)
+loss: 0.243, 0.107 sec/epoch
+516
+Optimization Algorithms
+Concise Implementation
+There is very little to do in Gluon since the standard sgd solver already had momentum
+built in. Setting matching parameters yields a very similar trajectory.
+trainer = torch.optim.SGD
+d2l.train_concise_ch11(trainer, {'lr': 0.005, 'momentum': 0.9}, data_iter)
+loss: 0.250, 0.108 sec/epoch
+12.6.3 Theoretical Analysis
+Sofar the 2D example of 𝑓 (𝑥) = 0.1𝑥2
+1+2𝑥2
+2 seemed rather contrived. We will now see that
+this is actually quite representative of the types of problem one might encounter, at least in
+the case of minimizing convex quadratic objective functions.
+517
+Momentum
+Quadratic Convex Functions
+Consider the function
+ℎ(x) = 1
+2xQx+x c+𝑏.
+(12.6.6)
+This is a general quadratic function. For positive definite matrices Q 0, i.e., for matrices
+with positive eigenvalues this has a minimizer at x∗ = −Q−1c with minimum value 𝑏 −
+1
+2cQ−1c. Hence we can rewrite ℎ as
+ℎ(x) = 1
+2 (x −Q−1c) Q(x−Q−1c) +𝑏 − 1
+2cQ−1c.
+(12.6.7)
+The gradient is given by 𝜕xℎ(x) = Q(x − Q−1c). That is, it is given by the distance
+between x and the minimizer, multiplied by Q. Consequently also the velocity is a linear
+combination of terms Q(x𝑡 − Q−1c).
+Since Q is positive definite it can be decomposed into its eigensystem via Q = O𝚲O for
+an orthogonal (rotation) matrix O and a diagonal matrix 𝚲 of positive eigenvalues. This
+allows us to perform a change of variables from x to z def
+= O(x−Q−1c) toobtain a much
+simplified expression:
+ℎ(z) = 1
+2z𝚲z+𝑏.
+(12.6.8)
+Here 𝑏 = 𝑏 − 1
+2cQ−1c. Since O is only an orthogonal matrix this does not perturb the
+gradients in a meaningful way. Expressed in terms of z gradient descent becomes
+z𝑡 = z𝑡−1 −𝚲z𝑡−1 = (I−𝚲)z𝑡−1.
+(12.6.9)
+The important fact in this expression is that gradient descent does not mix between different
+eigenspaces. That is, when expressed in terms of the eigensystem of Q the optimization
+problem proceeds in a coordinate-wise manner. This also holds for
+v𝑡 = 𝛽v𝑡−1 +𝚲z𝑡−1
+z𝑡 = z𝑡−1 −𝜂 (𝛽v𝑡−1 +𝚲z𝑡−1)
+= (I−𝜂𝚲)z𝑡−1 −𝜂𝛽v𝑡−1.
+In doing this we just proved the following theorem: gradient descent with and without
+momentum for a convex quadratic function decomposes into coordinate-wise optimization
+in the direction of the eigenvectors of the quadratic matrix.
+(12.6.10)
+Scalar Functions
+Given the above result let’s see what happens when we minimize the function 𝑓 (𝑥) = 𝜆
+2𝑥2.
+For gradient descent we have
+𝑥𝑡+1 = 𝑥𝑡 − 𝜂𝜆𝑥𝑡 = (1−𝜂𝜆)𝑥𝑡.
+(12.6.11)
+Whenever |1−𝜂𝜆| < 1 this optimization converges at an exponential rate since after 𝑡 steps
+we have 𝑥𝑡 = (1 − 𝜂𝜆)𝑡𝑥0. This shows how the rate of convergence improves initially as
+518
+Optimization Algorithms
+175
+we increase the learning rate 𝜂 until 𝜂𝜆 = 1. Beyond that things diverge and for 𝜂𝜆 > 2 the
+optimization problem diverges.
+lambdas = [0.1, 1, 10, 19]
+eta = 0.1
+d2l.set_figsize((6, 4))
+for lam in lambdas:
+t = torch.arange(20).detach().numpy()
+d2l.plt.plot(t, (1- eta * lam) ** t, label=f'lambda = {lam:.2f}')
+d2l.plt.xlabel('time')
+d2l.plt.legend();
+To analyze convergence in the case of momentum we begin by rewriting the update equa
+tions in terms of two scalars: one for 𝑥 and one for velocity 𝑣. This yields:
+𝑣𝑡+1
+𝑥𝑡+1
+= 𝛽
+𝜆
+−𝜂𝛽 (1−𝜂𝜆)
+𝑣𝑡
+𝑥𝑡
+=R(𝛽,𝜂,𝜆) 𝑣𝑡
+𝑥𝑡
+.
+(12.6.12)
+We used R to denote the 2 × 2 governing convergence behavior. After 𝑡 steps the initial
+choice [𝑣0,𝑥0] becomes R(𝛽,𝜂,𝜆)𝑡[𝑣0,𝑥0]. Hence, it is up to the eigenvalues of R to
+determine the speed of convergence. See the Distill post175 of Goh (2017) for a great
+animation and Flammarion and Bach (2015) for a detailed analysis. One can show that
+0 < 𝜂𝜆 < 2+2𝛽 velocity converges. This is a larger range of feasible parameters when
+compared to 0 < 𝜂𝜆 < 2 for gradient descent. It also suggests that in general large values
+of 𝛽 are desirable. Further details require a fair amount of technical detail and we suggest
+that the interested reader consult the original publications.
+12.6.4 Summary
+• Momentumreplaces gradients with a leaky average over past gradients. This accelerates
+convergence significantly.
+• Itisdesirableforbothnoise-freegradient descentand(noisy)stochasticgradient descent.
+• Momentum prevents stalling of the optimization process that is much more likely to
+occur for stochastic gradient descent.
+519
+Adagrad
+176
+• Theeffective number of gradients is given by 1
+1−𝛽 due to exponentiated downweighting
+of past data.
+• In the case of convex quadratic problems this can be analyzed explicitly in detail.
+• Implementation is quite straightforward but it requires us to store an additional state
+vector (velocity v).
+12.6.5 Exercises
+1. Use other combinations of momentum hyperparameters and learning rates and observe
+and analyze the different experimental results.
+2. Try out gradient descent and momentum for a quadratic problem where you have multi
+ple eigenvalues, i.e., 𝑓 (𝑥) = 1
+2 𝑖 𝜆𝑖𝑥2
+𝑖 , e.g., 𝜆𝑖 = 2−𝑖. Plot how the values of 𝑥 decrease
+for the initialization 𝑥𝑖 = 1.
+3. Derive minimum value and minimizer for ℎ(x) = 1
+2xQx + x c+ 𝑏.
+4. What changes when we perform stochastic gradient descent with momentum? What
+happens when we use minibatch stochastic gradient descent with momentum? Experi
+ment with the parameters?
+Discussions176.
+12.7 Adagrad
+Let’s begin by considering learning problems with features that occur infrequently.
+12.7.1 Sparse Features and Learning Rates
+Imagine that we are training a language model. To get good accuracy we typically want
+to decrease the learning rate as we keep on training, usually at a rate of O(𝑡−1
+2) or slower.
+Now consider a model training on sparse features, i.e., features that occur only infrequently.
+This is common for natural language, e.g., it is a lot less likely that we will see the word
+preconditioning than learning. However, it is also common in other areas such as computa
+tional advertising and personalized collaborative filtering. After all, there are many things
+that are of interest only for a small number of people.
+Parameters associated with infrequent features only receive meaningful updates whenever
+these features occur. Given a decreasing learning rate we might end up in a situation
+where the parameters for common features converge rather quickly to their optimal values,
+whereas for infrequent features we are still short of observing them sufficiently frequently
+before their optimal values can be determined. In other words, the learning rate either
+decreases too slowly for frequent features or too quickly for infrequent ones.
+520
+Optimization Algorithms
+A possible hack to redress this issue would be to count the number of times we see a par
+ticular feature and to use this as a clock for adjusting learning rates. That is, rather than
+choosing a learning rate of the form 𝜂 = 𝜂0
+√
+𝑡+𝑐 
+we could use 𝜂𝑖 = 𝜂0
+√
+𝑠(𝑖,𝑡)+𝑐 
+. Here 𝑠(𝑖, 𝑡)
+counts the number of nonzeros for feature 𝑖 that we have observed up to time 𝑡. This is ac
+tually quite easy to implement at no meaningful overhead. However, it fails whenever we
+do not quite have sparsity but rather just data where the gradients are often very small and
+only rarely large. After all, it is unclear where one would draw the line between something
+that qualifies as an observed feature or not.
+Adagrad by Duchi et al. (2011) addresses this by replacing the rather crude counter 𝑠(𝑖,𝑡)
+by an aggregate of the squares of previously observed gradients. In particular, it uses
+𝑠(𝑖, 𝑡 +1) = 𝑠(𝑖,𝑡)+(𝜕𝑖 𝑓 (x))2 as a means to adjust the learning rate. This has two benefits:
+first, we no longer need to decide just when a gradient is large enough. Second, it scales
+automatically with the magnitude of the gradients. Coordinates that routinely correspond
+to large gradients are scaled down significantly, whereas others with small gradients re
+ceive a much more gentle treatment. In practice this leads to a very effective optimization
+procedure for computational advertising and related problems. But this hides some of the
+additional benefits inherent in Adagrad that are best understood in the context of precondi
+tioning.
+12.7.2 Preconditioning
+Convex optimization problems are good for analyzing the characteristics of algorithms.
+After all, for most nonconvex problems it is difficult to derive meaningful theoretical guar
+antees, but intuition and insight often carry over. Let’s look at the problem of minimizing
+𝑓 (x) = 1
+2xQx+c x+𝑏.
+Aswe saw in Section 12.6, it is possible to rewrite this problem in terms of its eigendecom
+position Q = U𝚲U to arrive at a much simplified problem where each coordinate can be
+solved individually:
+𝑓 (x) = ¯𝑓(¯x) = 1
+2 ¯x𝚲¯x + ¯c ¯x + 𝑏.
+(12.7.1)
+Here we used ¯x = Ux and consequently ¯c = Uc. The modified problem has as its min
+imizer ¯x = −𝚲−1¯c and minimum value −1
+2¯c𝚲−1¯c + 𝑏. This is much easier to compute
+since 𝚲 is a diagonal matrix containing the eigenvalues of Q.
+If we perturb c slightly we would hope to find only slight changes in the minimizer of 𝑓.
+Unfortunately this is not the case. While slight changes in c lead to equally slight changes
+in ¯c, this is not the case for the minimizer of 𝑓 (and of ¯𝑓 respectively). Whenever the
+eigenvalues 𝚲𝑖 are large we will see only small changes in ¯𝑥𝑖 and in the minimum of ¯𝑓.
+Conversely, for small 𝚲𝑖 changes in ¯𝑥𝑖 can be dramatic. The ratio between the largest and
+the smallest eigenvalue is called the condition number of an optimization problem.
+𝜅 = 𝚲1
+𝚲𝑑
+.
+(12.7.2)
+If the condition number 𝜅 is large, it is difficult to solve the optimization problem accurately.
+We need to ensure that we are careful in getting a large dynamic range of values right. Our
+521
+Adagrad
+analysis leads to an obvious, albeit somewhat naive question: couldn’t we simply “fix” the
+problem by distorting the space such that all eigenvalues are 1. In theory this is quite easy:
+we only need the eigenvalues and eigenvectors of Q to rescale the problem from x to one
+in z def
+= 𝚲1
+2 Ux. Inthenewcoordinate system xQxcouldbesimplifiedto z 2. Alas, this
+is a rather impractical suggestion. Computing eigenvalues and eigenvectors is in general
+much more expensive than solving the actual problem.
+While computing eigenvalues exactly might be expensive, guessing them and computing
+them even somewhat approximately may already be a lot better than not doing anything at
+all. In particular, we could use the diagonal entries of Q and rescale it accordingly. This is
+much cheaper than computing eigenvalues.
+˜
+Q=diag−1
+2 (Q)Qdiag−1
+2 (Q).
+(12.7.3)
+In this case we have ˜ Q𝑖𝑗 = Q𝑖𝑗/ Q𝑖𝑖Q𝑗𝑗 and specifically ˜ Q𝑖𝑖 = 1 for all 𝑖. In most cases
+this simplifies the condition number considerably. For instance, the cases we discussed
+previously, this would entirely eliminate the problem at hand since the problem is axis
+aligned.
+Unfortunately we face yet another problem: in deep learning we typically do not even have
+access to the second derivative of the objective function: for x ∈ R𝑑 the second derivative
+even on a minibatch may require O(𝑑2) space and work to compute, thus making it practi
+cally infeasible. The ingenious idea of Adagrad is to use a proxy for that elusive diagonal
+of the Hessian that is both relatively cheap to compute and effective—the magnitude of the
+gradient itself.
+In order to see why this works, let’s look at ¯𝑓(¯x). We have that
+𝜕¯x 
+¯𝑓( ¯x) = 𝚲¯x + ¯c = 𝚲 (¯x − ¯x0) ,
+(12.7.4)
+where ¯x0 is the minimizer of ¯𝑓. Hence the magnitude of the gradient depends both on 𝚲
+and the distance from optimality. If ¯x− ¯x0 did not change, this would be all that is needed.
+After all, in this case the magnitude of the gradient 𝜕¯x 
+¯𝑓(¯x) suffices. Since AdaGrad is a
+stochastic gradient descent algorithm, we will see gradients with nonzero variance even at
+optimality. As a result we can safely use the variance of the gradients as a cheap proxy for
+the scale of the Hessian. A thorough analysis is beyond the scope of this section (it would
+be several pages). We refer the reader to (Duchi et al., 2011) for details.
+12.7.3 The Algorithm
+Let’s formalize the discussion from above. We use the variable s𝑡 to accumulate past gra
+dient variance as follows.
+g𝑡 = 𝜕w𝑙(𝑦𝑡, 𝑓 (x𝑡,w)),
+s𝑡 = s𝑡−1 + g2
+𝑡 ,
+w𝑡 = w𝑡−1 − 𝜂
+√
+s𝑡 + 𝜖 · g𝑡.
+(12.7.5)
+522
+Optimization Algorithms
+Here the operation are applied coordinate wise. That is, v2 has entries 𝑣2
+𝑖 . Likewise 1
+√
+entries 1
+√
+𝑣 
+has
+𝑣𝑖 
+and u · v has entries 𝑢𝑖𝑣𝑖. As before 𝜂 is the learning rate and 𝜖 is an additive
+constant that ensures that we do not divide by 0. Last, we initialize s0 = 0.
+Just like in the case of momentum we need to keep track of an auxiliary variable, in this
+case to allow for an individual learning rate per coordinate. This does not increase the cost
+of Adagrad significantly relative to SGD, simply since the main cost is typically to compute
+𝑙(𝑦𝑡, 𝑓 (x𝑡, w)) and its derivative.
+Note that accumulating squared gradients in s𝑡 means that s𝑡 grows essentially at linear rate
+(somewhat slower than linearly in practice, since the gradients initially diminish). This
+leads to an O(𝑡−1
+2) learning rate, albeit adjusted on a per coordinate basis. For convex
+problems this is perfectly adequate. In deep learning, though, we might want to decrease
+the learning rate rather more slowly. This led to a number of Adagrad variants that we will
+discuss in the subsequent chapters. For now let’s see how it behaves in a quadratic convex
+problem. We use the same problem as before:
+𝑓 (x) = 0.1𝑥2
+1 + 2𝑥2
+2.
+(12.7.6)
+We are going to implement Adagrad using the same learning rate previously, i.e., 𝜂 = 0.4.
+As we can see, the iterative trajectory of the independent variable is smoother. However,
+due to the cumulative effect of 𝒔𝑡, the learning rate continuously decays, so the independent
+variable does not move as much during later stages of iteration.
+%matplotlib inline
+import math
+import torch
+from d2l import torch as d2l
+def adagrad_2d(x1, x2, s1, s2):
+eps = 1e-6
+g1, g2 = 0.2 * x1, 4 * x2
+s1 += g1 ** 2
+s2 += g2 ** 2
+x1-= eta / math.sqrt(s1 + eps) * g1
+x2-= eta / math.sqrt(s2 + eps) * g2
+return x1, x2, s1, s2
+def f_2d(x1, x2):
+return 0.1 * x1 ** 2 + 2 * x2 ** 2
+eta = 0.4
+d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
+epoch 20, x1:-2.382563, x2:-0.158591
+As we increase the learning rate to 2 we see much better behavior. This already indicates
+that the decrease in learning rate might be rather aggressive, even in the noise-free case and
+we need to ensure that parameters converge appropriately.
+523
+Adagrad
+eta = 2
+d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
+epoch 20, x1:-0.002295, x2:-0.000000
+12.7.4 Implementation from Scratch
+Just like the momentum method, Adagrad needs to maintain a state variable of the same
+shape as the parameters.
+def init_adagrad_states(feature_dim):
+s_w = torch.zeros((feature_dim, 1))
+s_b = torch.zeros(1)
+return (s_w, s_b)
+def adagrad(params, states, hyperparams):
+eps = 1e-6
+for p, s in zip(params, states):
+with torch.no_grad():
+s[:] += torch.square(p.grad)
+p[:]-= hyperparams['lr'] * p.grad / torch.sqrt(s + eps)
+p.grad.data.zero_()
+Compared to the experiment in Section 12.5 we use a larger learning rate to train the
+model.
+524
+Optimization Algorithms
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
+{'lr': 0.1}, data_iter, feature_dim);
+loss: 0.243, 0.162 sec/epoch
+12.7.5 Concise Implementation
+Using the Trainer instance of the algorithm adagrad, we can invoke the Adagrad algo
+rithm in Gluon.
+trainer = torch.optim.Adagrad
+d2l.train_concise_ch11(trainer, {'lr': 0.1}, data_iter)
+loss: 0.242, 0.129 sec/epoch
+12.7.6 Summary
+• Adagrad decreases the learning rate dynamically on a per-coordinate basis.
+• It uses the magnitude of the gradient as a means of adjusting how quickly progress is
+achieved- coordinates with large gradients are compensated with a smaller learning
+rate.
+525
+RMSProp
+177
+178
+• Computing the exact second derivative is typically infeasible in deep learning problems
+due to memory and computational constraints. The gradient can be a useful proxy.
+• If the optimization problem has a rather uneven structure Adagrad can help mitigate the
+distortion.
+• Adagrad is particularly effective for sparse features where the learning rate needs to de
+crease more slowly for infrequently occurring terms.
+• Ondeeplearning problems Adagrad can sometimes be too aggressive in reducing learn
+ing rates. We will discuss strategies for mitigating this in the context of Section 12.10.
+12.7.7 Exercises
+1. Prove that for an orthogonal matrix U and a vector c the following holds: c − ffi2 =
+Uc−Uffi2. Whydoesthismeanthatthemagnitudeofperturbationsdoesnotchange
+after an orthogonal change of variables?
+2. Try out Adagrad for 𝑓 (x) = 0.1𝑥2
+1 + 2𝑥2
+2 and also for the objective function was rotated
+by 45 degrees, i.e., 𝑓 (x) = 0.1(𝑥1 + 𝑥2)2 + 2(𝑥1 − 𝑥2)2. Does it behave differently?
+3. Prove Gerschgorin’s circle theorem177 which states that eigenvalues 𝜆𝑖 of a matrix M
+satisfy |𝜆𝑖 − M𝑗𝑗| ≤ 𝑘≠𝑗 |M𝑗𝑘| for at least one choice of 𝑗.
+4. What does Gerschgorin’s theorem tell us about the eigenvalues of the diagonally pre
+conditioned matrix diag−1
+2 (M)Mdiag−1
+2 (M)?
+5. TryoutAdagradforaproperdeepnetwork,suchasSection7.6whenappliedtoFashion
+MNIST.
+6. Howwould you need to modify Adagrad to achieve a less aggressive decay in learning
+rate?
+Discussions178.
+12.8 RMSProp
+One of the key issues in Section 12.7 is that the learning rate decreases at a predefined
+schedule of effectively O(𝑡−1
+2). While this is generally appropriate for convex problems,
+it might not be ideal for nonconvex ones, such as those encountered in deep learning. Yet,
+the coordinate-wise adaptivity of Adagrad is highly desirable as a preconditioner.
+Tieleman and Hinton (2012) proposed the RMSProp algorithm as a simple fix to decouple
+rate scheduling from coordinate-adaptive learning rates. The issue is that Adagrad accu
+mulates the squares of the gradient g𝑡 into a state vector s𝑡 = s𝑡−1 + g2 𝑡 . As a result s𝑡
+keeps on growing without bound due to the lack of normalization, essentially linearly as
+the algorithm converges.
+526
+Optimization Algorithms
+One way of fixing this problem would be to use s𝑡/𝑡. For reasonable distributions of g𝑡
+this will converge. Unfortunately it might take a very long time until the limit behavior
+starts to matter since the procedure remembers the full trajectory of values. An alternative
+is to use a leaky average in the same way we used in the momentum method, i.e., s𝑡 ←
+𝛾s𝑡−1 + (1 − 𝛾)g2 𝑡 for some parameter 𝛾 > 0. Keeping all other parts unchanged yields
+RMSProp.
+12.8.1 The Algorithm
+Let’s write out the equations in detail.
+s𝑡 ← 𝛾s𝑡−1 + (1−𝛾)g2
+𝑡 ,
+x𝑡 ←x𝑡−1 − 𝜂
+√
+s𝑡 + 𝜖 g𝑡.
+(12.8.1)
+The constant 𝜖 > 0 is typically set to 10−6 to ensure that we do not suffer from division by
+zero or overly large step sizes. Given this expansion we are now free to control the learning
+rate 𝜂 independently of the scaling that is applied on a per-coordinate basis. In terms of
+leaky averages we can apply the same reasoning as previously applied in the case of the
+momentum method. Expanding the definition of s𝑡 yields
+s𝑡 = (1−𝛾)g2
+𝑡 + 𝛾s𝑡−1
+= (1−𝛾) g2
+𝑡 +𝛾g2
+𝑡−1 + 𝛾2g𝑡−2 + ..., .
+As before in Section 12.6 we use 1 + 𝛾 + 𝛾2 + ...,= 1
+(12.8.2)
+1−𝛾. Hence the sum of weights is
+normalized to 1 with a half-life time of an observation of 𝛾−1. Let’s visualize the weights
+for the past 40 time steps for various choices of 𝛾.
+import math
+import torch
+from d2l import torch as d2l
+d2l.set_figsize()
+gammas = [0.95, 0.9, 0.8, 0.7]
+for gamma in gammas:
+x = torch.arange(40).detach().numpy()
+d2l.plt.plot(x, (1-gamma) * gamma ** x, label=f'gamma = {gamma:.2f}')
+d2l.plt.xlabel('time');
+12.8.2 Implementation from Scratch
+As before we use the quadratic function 𝑓 (x) = 0.1𝑥2
+1 + 2𝑥2
+2 to observe the trajectory of
+RMSProp. Recall that in Section 12.7, when we used Adagrad with a learning rate of
+0.4, the variables moved only very slowly in the later stages of the algorithm since the
+learning rate decreased too quickly. Since 𝜂 is controlled separately this does not happen
+with RMSProp.
+527
+RMSProp
+def rmsprop_2d(x1, x2, s1, s2):
+g1, g2, eps = 0.2 * x1, 4 * x2, 1e-6
+s1 = gamma * s1 + (1- gamma) * g1 ** 2
+s2 = gamma * s2 + (1- gamma) * g2 ** 2
+x1-= eta / math.sqrt(s1 + eps) * g1
+x2-= eta / math.sqrt(s2 + eps) * g2
+return x1, x2, s1, s2
+def f_2d(x1, x2):
+return 0.1 * x1 ** 2 + 2 * x2 ** 2
+eta, gamma = 0.4, 0.9
+d2l.show_trace_2d(f_2d, d2l.train_2d(rmsprop_2d))
+epoch 20, x1:-0.010599, x2: 0.000000
+Next, we implement RMSProp to be used in a deep network. This is equally straightfor
+ward.
+def init_rmsprop_states(feature_dim):
+s_w = torch.zeros((feature_dim, 1))
+s_b = torch.zeros(1)
+return (s_w, s_b)
+def rmsprop(params, states, hyperparams):
+gamma, eps = hyperparams['gamma'], 1e-6
+(continues on next page)
+528
+Optimization Algorithms
+(continued from previous page)
+for p, s in zip(params, states):
+with torch.no_grad():
+s[:] = gamma * s + (1- gamma) * torch.square(p.grad)
+p[:]-= hyperparams['lr'] * p.grad / torch.sqrt(s + eps)
+p.grad.data.zero_()
+We set the initial learning rate to 0.01 and the weighting term 𝛾 to 0.9. That is, s aggregates
+on average over the past 1/(1 − 𝛾) = 10 observations of the square gradient.
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(rmsprop, init_rmsprop_states(feature_dim),
+{'lr': 0.01, 'gamma': 0.9}, data_iter, feature_dim);
+loss: 0.245, 0.245 sec/epoch
+12.8.3 Concise Implementation
+Since RMSProp is a rather popular algorithm it is also available in the Trainer instance.
+All we need to do is instantiate it using an algorithm named rmsprop, assigning 𝛾 to the
+parameter gamma1.
+trainer = torch.optim.RMSprop
+d2l.train_concise_ch11(trainer, {'lr': 0.01, 'alpha': 0.9},
+data_iter)
+loss: 0.246, 0.129 sec/epoch
+12.8.4 Summary
+• RMSProp is very similar to Adagrad insofar as both use the square of the gradient to
+scale coefficients.
+• RMSProp shares with momentum the leaky averaging. However, RMSProp uses the
+technique to adjust the coefficient-wise preconditioner.
+529
+Adadelta
+179
+• Thelearning rate needs to be scheduled by the experimenter in practice.
+• The coefficient 𝛾 determines how long the history is when adjusting the per-coordinate
+scale.
+12.8.5 Exercises
+1. What happens experimentally if we set 𝛾 = 1? Why?
+2. Rotate the optimization problem to minimize 𝑓 (x) = 0.1(𝑥1 +𝑥2)2 +2(𝑥1 −𝑥2)2. What
+happens to the convergence?
+3. Tryout what happens to RMSProponarealmachinelearning problem, such as training
+on Fashion-MNIST. Experiment with different choices for adjusting the learning rate.
+4. Would you want to adjust 𝛾 as optimization progresses? How sensitive is RMSProp to
+this?
+Discussions179.
+12.9 Adadelta
+Adadelta is yet another variant of AdaGrad (Section 12.7). The main difference lies in
+the fact that it decreases the amount by which the learning rate is adaptive to coordinates.
+Moreover, traditionally it referred to as not having a learning rate since it uses the amount of
+change itself as calibration for future change. The algorithm was proposed in Zeiler (2012).
+It is fairly straightforward, given the discussion of previous algorithms so far.
+12.9.1 The Algorithm
+In a nutshell, Adadelta uses two state variables, s𝑡 to store a leaky average of the second
+moment of thegradientandΔx𝑡 tostorealeakyaverageofthesecondmomentofthechange
+of parameters in the model itself. Note that we use the original notation and naming of the
+authors for compatibility with other publications and implementations (there is no other
+530
+Optimization Algorithms
+real reason why one should use different Greek variables to indicate a parameter serving
+the same purpose in momentum, Adagrad, RMSProp, and Adadelta).
+Here are the technical details of Adadelta. Given the parameter du jour is 𝜌, we obtain the
+following leaky updates similarly to Section 12.8:
+s𝑡 = 𝜌s𝑡−1 + (1− 𝜌)g2
+𝑡 .
+(12.9.1)
+The difference to Section 12.8 is that we perform updates with the rescaled gradient g𝑡,
+i.e.,
+x𝑡 = x𝑡−1 −g𝑡.
+So what is the rescaled gradient g𝑡? We can calculate it as follows:
+√
+g𝑡 =
+Δx𝑡−1 + 𝜖
+√
+s𝑡 + 𝜖 g𝑡,
+(12.9.2)
+(12.9.3)
+where Δx𝑡−1 is the leaky average of the squared rescaled gradients g𝑡. We initialize Δx0
+to be 0 and update it at each step with g𝑡, i.e.,
+Δx𝑡 = 𝜌Δx𝑡−1 + (1− 𝜌)g𝑡
+2,
+and 𝜖 (a small value such as 10−5) is added to maintain numerical stability.
+12.9.2 Implementation
+(12.9.4)
+Adadelta needs to maintain two state variables for each variable, s𝑡 and Δx𝑡. This yields
+the following implementation.
+%matplotlib inline
+import torch
+from d2l import torch as d2l
+def init_adadelta_states(feature_dim):
+s_w, s_b = torch.zeros((feature_dim, 1)), torch.zeros(1)
+delta_w, delta_b = torch.zeros((feature_dim, 1)), torch.zeros(1)
+return ((s_w, delta_w), (s_b, delta_b))
+def adadelta(params, states, hyperparams):
+rho, eps = hyperparams['rho'], 1e-5
+for p, (s, delta) in zip(params, states):
+with torch.no_grad():
+# In-place updates via [:]
+s[:] = rho * s + (1- rho) * torch.square(p.grad)
+g = (torch.sqrt(delta + eps) / torch.sqrt(s + eps)) * p.grad
+p[:]-= g
+delta[:] = rho * delta + (1- rho) * g * g
+p.grad.data.zero_()
+Choosing 𝜌 = 0.9 amounts to a half-life time of 10 for each parameter update. This tends
+to work quite well. We get the following behavior.
+531
+Adadelta
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(adadelta, init_adadelta_states(feature_dim),
+{'rho': 0.9}, data_iter, feature_dim);
+loss: 0.245, 0.160 sec/epoch
+For a concise implementation we simply use the Adadelta algorithm from high-level APIs.
+This yields the following one-liner for a much more compact invocation.
+trainer = torch.optim.Adadelta
+d2l.train_concise_ch11(trainer, {'rho': 0.9}, data_iter)
+loss: 0.243, 0.119 sec/epoch
+12.9.3 Summary
+• Adadelta has no learning rate parameter. Instead, it uses the rate of change in the param
+eters itself to adapt the learning rate.
+• Adadelta requires two state variables to store the second moments of gradient and the
+change in parameters.
+• Adadelta uses leaky averages to keep a running estimate of the appropriate statistics.
+532
+Optimization Algorithms
+180
+12.9.4 Exercises
+1. Adjust the value of 𝜌. What happens?
+2. Showhowtoimplement the algorithm without the use of g𝑡. Why might this be a good
+idea?
+3. Is Adadelta really learning rate free? Could you find optimization problems that break
+Adadelta?
+4. Compare Adadelta to Adagrad and RMS prop to discuss their convergence behavior.
+Discussions180.
+12.10 Adam
+In the discussions leading up to this section we encountered a number of techniques for
+efficient optimization. Let’s recap them in detail here:
+• We saw that Section 12.4 is more effective than Gradient Descent when solving opti
+mization problems, e.g., due to its inherent resilience to redundant data.
+• We saw that Section 12.5 affords significant additional efficiency arising from vector
+ization, using larger sets of observations in one minibatch. This is the key to efficient
+multi-machine, multi-GPU and overall parallel processing.
+• Section 12.6 added a mechanism for aggregating a history of past gradients to accelerate
+convergence.
+• Section 12.7 used per-coordinate scaling to allow for a computationally efficient precon
+ditioner.
+• Section 12.8 decoupled per-coordinate scaling from a learning rate adjustment.
+Adam (Kingma and Ba, 2014) combines all these techniques into one efficient learning
+algorithm. As expected, this is an algorithm that has become rather popular as one of the
+more robust and effective optimization algorithms to use in deep learning. It is not without
+issues, though. In particular, (Reddi et al., 2019) show that there are situations where Adam
+can diverge due to poor variance control. In a follow-up work Zaheer et al. (2018) proposed
+a hotfix to Adam, called Yogi which addresses these issues. More on this later. For now
+let’s review the Adam algorithm.
+12.10.1 The Algorithm
+One of the key components of Adam is that it uses exponential weighted moving averages
+(also known as leaky averaging) to obtain an estimate of both the momentum and also the
+533
+Adam
+second moment of the gradient. That is, it uses the state variables
+v𝑡 ← 𝛽1v𝑡−1 + (1− 𝛽1)g𝑡,
+s𝑡 ← 𝛽2s𝑡−1 + (1− 𝛽2)g2
+𝑡 .
+(12.10.1)
+Here 𝛽1 and 𝛽2 are nonnegative weighting parameters. Common choices for them are
+𝛽1 = 0.9 and 𝛽2 = 0.999. That is, the variance estimate moves much more slowly than the
+momentum term. Notethatifweinitialize v0 = s0 = 0wehaveasignificantamountofbias
+initially towards smaller values. This can be addressed byusingthefactthat 𝑡−1
+𝑖=0 𝛽𝑖 = 1−𝛽𝑡
+1−𝛽
+to re-normalize terms. Correspondingly the normalized state variables are given by
+ˆ
+v𝑡 = v𝑡
+1 − 𝛽𝑡
+1 
+and ˆs𝑡 = s𝑡
+1 − 𝛽𝑡
+2
+.
+(12.10.2)
+Armed with the proper estimates we can now write out the update equations. First, we
+rescale the gradient in a manner very much akin to that of RMSProp to obtain
+g𝑡 = 𝜂ˆv𝑡
+√
+s𝑡 + 𝜖 .
+(12.10.3)
+ˆ
+Unlike RMSProp our update uses the momentum ˆv𝑡 rather than the gradient itself. More
+over, there is a slight cosmetic difference as the rescaling happens using 1
+√
+ˆ
+s𝑡+𝜖 
+instead of
+√
+1
+ˆ
+s𝑡+𝜖 
+. The former worksarguably slightly better in practice, hence the deviation from RM
+SProp. Typically we pick 𝜖 = 10−6 for a good trade-off between numerical stability and
+fidelity.
+Now we have all the pieces in place to compute updates. This is slightly anticlimactic and
+we have a simple update of the form
+x𝑡 ←x𝑡−1 −g𝑡.
+(12.10.4)
+Reviewing the design of Adam its inspiration is clear. Momentum and scale are clearly
+visible in the state variables. Their rather peculiar definition forces us to debias terms
+(this could be fixed by a slightly different initialization and update condition). Second, the
+combination of both terms is pretty straightforward, given RMSProp. Last, the explicit
+learning rate 𝜂 allows us to control the step length to address issues of convergence.
+12.10.2 Implementation
+Implementing Adam from scratch is not very daunting. For convenience we store the time
+step counter 𝑡 in the hyperparams dictionary. Beyond that all is straightforward.
+%matplotlib inline
+import torch
+from d2l import torch as d2l
+def init_adam_states(feature_dim):
+v_w, v_b = torch.zeros((feature_dim, 1)), torch.zeros(1)
+s_w, s_b = torch.zeros((feature_dim, 1)), torch.zeros(1)
+return ((v_w, s_w), (v_b, s_b))
+(continues on next page)
+534
+Optimization Algorithms
+(continued from previous page)
+def adam(params, states, hyperparams):
+beta1, beta2, eps = 0.9, 0.999, 1e-6
+for p, (v, s) in zip(params, states):
+with torch.no_grad():
+v[:] = beta1 * v + (1- beta1) * p.grad
+s[:] = beta2 * s + (1- beta2) * torch.square(p.grad)
+v_bias_corr = v / (1- beta1 ** hyperparams['t'])
+s_bias_corr = s / (1- beta2 ** hyperparams['t'])
+p[:]-= hyperparams['lr'] * v_bias_corr / (torch.sqrt(s_bias_corr)
++ eps)
+p.grad.data.zero_()
+hyperparams['t'] += 1
+We are ready to use Adam to train the model. We use a learning rate of 𝜂 = 0.01.
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(adam, init_adam_states(feature_dim),
+{'lr': 0.01, 't': 1}, data_iter, feature_dim);
+loss: 0.243, 0.193 sec/epoch
+A more concise implementation is straightforward since adam is one of the algorithms pro
+vided as part of the Gluon trainer optimization library. Hence we only need to pass
+configuration parameters for an implementation in Gluon.
+trainer = torch.optim.Adam
+d2l.train_concise_ch11(trainer, {'lr': 0.01}, data_iter)
+loss: 0.243, 0.152 sec/epoch
+12.10.3 Yogi
+One of the problems of Adam is that it can fail to converge even in convex settings when the
+second moment estimate in s𝑡 blows up. As a fix Zaheer et al. (2018) proposed a refined
+535
+Adam
+update (and initialization) for s𝑡. To understand what’s going on, let’s rewrite the Adam
+update as follows:
+s𝑡 ←s𝑡−1 + (1− 𝛽2) g2
+𝑡 −s𝑡−1 .
+(12.10.5)
+Wheneverg2 𝑡 hashighvarianceorupdatesaresparse,s𝑡 mightforgetpastvaluestooquickly.
+A possible fixfor this is to replace g2 𝑡−s𝑡−1 byg2 𝑡 sgn(g2 𝑡−s𝑡−1). Nowthemagnitudeofthe
+update no longer depends on the amount of deviation. This yields the Yogi updates
+s𝑡 ←s𝑡−1 + (1− 𝛽2)g2
+𝑡 sgn(g2
+𝑡 −s𝑡−1).
+(12.10.6)
+The authors furthermore advise to initialize the momentum on a larger initial batch rather
+than just initial pointwise estimate. We omit the details since they are not material to the
+discussion and since even without this convergence remains pretty good.
+def yogi(params, states, hyperparams):
+beta1, beta2, eps = 0.9, 0.999, 1e-3
+for p, (v, s) in zip(params, states):
+with torch.no_grad():
+v[:] = beta1 * v + (1- beta1) * p.grad
+s[:] = s + (1- beta2) * torch.sign(
+torch.square(p.grad)- s) * torch.square(p.grad)
+v_bias_corr = v / (1- beta1 ** hyperparams['t'])
+s_bias_corr = s / (1- beta2 ** hyperparams['t'])
+p[:]-= hyperparams['lr'] * v_bias_corr / (torch.sqrt(s_bias_corr)
++ eps)
+p.grad.data.zero_()
+hyperparams['t'] += 1
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+d2l.train_ch11(yogi, init_adam_states(feature_dim),
+{'lr': 0.01, 't': 1}, data_iter, feature_dim);
+loss: 0.243, 0.165 sec/epoch
+12.10.4 Summary
+• Adam combines features of many optimization algorithms into a fairly robust update
+rule.
+536
+Optimization Algorithms
+181
+• Created on the basis of RMSProp, Adam also uses EWMA on the minibatch stochastic
+gradient.
+• Adamuses bias correction to adjust for a slow startup when estimating momentum and
+a second moment.
+• Forgradients with significant variance we may encounter issues with convergence. They
+can be amended by using larger minibatches or by switching to an improved estimate
+for s𝑡. Yogi offers such an alternative.
+12.10.5 Exercises
+1. Adjust the learning rate and observe and analyze the experimental results.
+2. Can you rewrite momentum and second moment updates such that it does not require
+bias correction?
+3. Whydoyou need to reduce the learning rate 𝜂 as we converge?
+4. Try to construct a case for which Adam diverges and Yogi converges?
+Discussions181.
+12.11 Learning Rate Scheduling
+Sofarwe primarilyfocusedon optimizationalgorithmsforhowtoupdatetheweightvectors
+rather than on the rate at which they are being updated. Nonetheless, adjusting the learning
+rate is often just as important as the actual algorithm. There are a number of aspects to
+consider:
+• Mostobviously the magnitude of the learning rate matters. If it is too large, optimization
+diverges, if it is too small, it takes too long to train or we end up with a suboptimal
+result. We saw previously that the condition number of the problem matters (see e.g.,
+Section 12.6 for details). Intuitively it is the ratio of the amount of change in the least
+sensitive direction vs. the most sensitive one.
+537
+Learning Rate Scheduling
+• Secondly, the rate of decay is just as important. If the learning rate remains large we may
+simply end up bouncing around the minimum and thus not reach optimality. Section
+12.5 discussed this in some detail and we analyzed performance guarantees in Section
+12.4. In short, we want the rate to decay, but probably more slowly than O(𝑡−1
+2) which
+would be a good choice for convex problems.
+• Another aspect that is equally important is initialization. This pertains both to how the
+parameters are set initially (review Section 5.4 for details) and also how they evolve
+initially. This goes under the moniker of warmup, i.e., how rapidly we start moving
+towards the solution initially. Large steps in the beginning might not be beneficial, in
+particular since the initial set of parameters is random. The initial update directions
+might be quite meaningless, too.
+• Lastly, there are a number of optimization variants that perform cyclical learning rate
+adjustment. This is beyond the scope of the current chapter. We recommend the
+reader to review details in Izmailov et al. (2018), e.g., how to obtain better solutions
+by averaging over an entire path of parameters.
+Given the fact that there is a lot of detail needed to manage learning rates, most deep learn
+ing frameworks have tools to deal with this automatically. In the current chapter we will
+review the effects that different schedules have on accuracy and also show how this can be
+managed efficiently via a learning rate scheduler.
+12.11.1 Toy Problem
+We begin with a toy problem that is cheap enough to compute easily, yet sufficiently non
+trivial to illustrate some of the key aspects. For that we pick a slightly modernized version
+of LeNet (relu instead of sigmoid activation, MaxPooling rather than AveragePooling),
+as applied to Fashion-MNIST. Moreover, we hybridize the network for performance. Since
+most of the code is standard we just introduce the basics without further detailed discussion.
+See Chapter 7 for a refresher as needed.
+%matplotlib inline
+import math
+import torch
+from torch import nn
+from torch.optim import lr_scheduler
+from d2l import torch as d2l
+def net_fn():
+model = nn.Sequential(
+nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.ReLU(),
+nn.MaxPool2d(kernel_size=2, stride=2),
+nn.Conv2d(6, 16, kernel_size=5), nn.ReLU(),
+nn.MaxPool2d(kernel_size=2, stride=2),
+nn.Flatten(),
+nn.Linear(16 * 5 * 5, 120), nn.ReLU(),
+nn.Linear(120, 84), nn.ReLU(),
+nn.Linear(84, 10))
+(continues on next page)
+538
+Optimization Algorithms
+(continued from previous page)
+return model
+loss = nn.CrossEntropyLoss()
+device = d2l.try_gpu()
+batch_size = 256
+train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size=batch_size)
+# The code is almost identical to `d2l.train_ch6` defined in the
+# lenet section of chapter convolutional neural networks
+def train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
+scheduler=None):
+net.to(device)
+animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs],
+legend=['train loss', 'train acc', 'test acc'])
+for epoch in range(num_epochs):
+metric = d2l.Accumulator(3) # train_loss, train_acc, num_examples
+for i, (X, y) in enumerate(train_iter):
+net.train()
+trainer.zero_grad()
+X, y = X.to(device), y.to(device)
+y_hat = net(X)
+l = loss(y_hat, y)
+l.backward()
+trainer.step()
+with torch.no_grad():
+metric.add(l * X.shape[0], d2l.accuracy(y_hat, y), X.shape[0])
+train_loss = metric[0] / metric[2]
+train_acc = metric[1] / metric[2]
+if (i + 1) % 50 == 0:
+animator.add(epoch + i / len(train_iter),
+(train_loss, train_acc, None))
+test_acc = d2l.evaluate_accuracy_gpu(net, test_iter)
+animator.add(epoch+1, (None, None, test_acc))
+if scheduler:
+if scheduler.__module__ == lr_scheduler.__name__:
+# Using PyTorch In-Built scheduler
+scheduler.step()
+else:
+# Using custom defined scheduler
+for param_group in trainer.param_groups:
+param_group['lr'] = scheduler(epoch)
+print(f'train loss {train_loss:.3f}, train acc {train_acc:.3f}, '
+f'test acc {test_acc:.3f}')
+Let’s have a look at what happens if we invoke this algorithm with default settings, such as
+a learning rate of 0.3 and train for 30 iterations. Note how the training accuracy keeps on
+increasing while progress in terms of test accuracy stalls beyond a point. The gap between
+both curves indicates overfitting.
+539
+Learning Rate Scheduling
+lr, num_epochs = 0.3, 30
+net = net_fn()
+trainer = torch.optim.SGD(net.parameters(), lr=lr)
+train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
+train loss 0.145, train acc 0.944, test acc 0.877
+12.11.2 Schedulers
+One way of adjusting the learning rate is to set it explicitly at each step. This is conve
+niently achieved by the set_learning_rate method. We could adjust it downward after
+every epoch (or even after every minibatch), e.g., in a dynamic manner in response to how
+optimization is progressing.
+lr = 0.1
+trainer.param_groups[0]["lr"] = lr
+print(f'learning rate is now {trainer.param_groups[0]["lr"]:.2f}')
+learning rate is now 0.10
+More generally we want to define a scheduler. When invoked with the number of updates
+it returns the appropriate value of the learning rate. Let’s define a simple one that sets the
+learning rate to 𝜂 = 𝜂0(𝑡 + 1)−1
+2 .
+class SquareRootScheduler:
+def __init__(self, lr=0.1):
+self.lr = lr
+def __call__(self, num_update):
+return self.lr * pow(num_update + 1.0,-0.5)
+Let’s plot its behavior over a range of values.
+scheduler = SquareRootScheduler(lr=0.1)
+d2l.plot(torch.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
+540
+Optimization Algorithms
+Now let’s see how this plays out for training on Fashion-MNIST. We simply provide the
+scheduler as an additional argument to the training algorithm.
+net = net_fn()
+trainer = torch.optim.SGD(net.parameters(), lr)
+train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
+scheduler)
+train loss 0.273, train acc 0.900, test acc 0.886
+This worked quite a bit better than previously. Two things stand out: the curve was rather
+more smooth than previously. Secondly, there was less overfitting. Unfortunately it is not a
+well-resolved question as to why certain strategies lead to less overfitting in theory. There
+is some argument that a smaller stepsize will lead to parameters that are closer to zero and
+thus simpler. However, this doesnotexplainthephenomenonentirelysincewedonotreally
+stop early but simply reduce the learning rate gently.
+12.11.3 Policies
+While we cannot possibly cover the entire variety of learning rate schedulers, we attempt
+to give a brief overview of popular policies below. Common choices are polynomial decay
+and piecewise constant schedules. Beyond that, cosine learning rate schedules have been
+found to work well empirically on some problems. Lastly, on some problems it is beneficial
+to warm up the optimizer prior to using large learning rates.
+541
+Learning Rate Scheduling
+Factor Scheduler
+One alternative to a polynomial decay would be a multiplicative one, that is 𝜂𝑡+1 ← 𝜂𝑡 · 𝛼
+for 𝛼 ∈ (0,1). Topreventthe learning rate from decaying beyond a reasonable lower bound
+the update equation is often modified to 𝜂𝑡+1 ← max(𝜂min,𝜂𝑡 · 𝛼).
+class FactorScheduler:
+def __init__(self, factor=1, stop_factor_lr=1e-7, base_lr=0.1):
+self.factor = factor
+self.stop_factor_lr = stop_factor_lr
+self.base_lr = base_lr
+def __call__(self, num_update):
+self.base_lr = max(self.stop_factor_lr, self.base_lr * self.factor)
+return self.base_lr
+scheduler = FactorScheduler(factor=0.9, stop_factor_lr=1e-2, base_lr=2.0)
+d2l.plot(torch.arange(50), [scheduler(t) for t in range(50)])
+This can also be accomplished by a built-in scheduler in MXNet via the lr_scheduler.
+FactorSchedulerobject. It takes a few moreparameters, such as warmupperiod, warmup
+mode (linear or constant), the maximum number of desired updates, etc.; Going forward
+we will use the built-in schedulers as appropriate and only explain their functionality here.
+As illustrated, it is fairly straightforward to build your own scheduler if needed.
+Multi Factor Scheduler
+A common strategy for training deep networks is to keep the learning rate piecewise con
+stant and to decrease it by a given amount every so often. That is, given a set of times
+when to decrease the rate, such as 𝑠 = {5,10,20} decrease 𝜂𝑡+1 ← 𝜂𝑡 · 𝛼 whenever 𝑡 ∈ 𝑠.
+Assuming that the values are halved at each step we can implement this as follows.
+net = net_fn()
+trainer = torch.optim.SGD(net.parameters(), lr=0.5)
+scheduler = lr_scheduler.MultiStepLR(trainer, milestones=[15, 30], gamma=0.5)
+def get_lr(trainer, scheduler):
+lr = scheduler.get_last_lr()[0]
+trainer.step()
+(continues on next page)
+542
+Optimization Algorithms
+(continued from previous page)
+scheduler.step()
+return lr
+d2l.plot(torch.arange(num_epochs), [get_lr(trainer, scheduler)
+for t in range(num_epochs)])
+The intuition behind this piecewise constant learning rate schedule is that one lets opti
+mization proceed until a stationary point has been reached in terms of the distribution of
+weight vectors. Then (and only then) do we decrease the rate such as to obtain a higher
+quality proxy to a good local minimum. The example below shows how this can produce
+ever slightly better solutions.
+train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
+scheduler)
+train loss 0.194, train acc 0.927, test acc 0.869
+Cosine Scheduler
+A rather perplexing heuristic was proposed by Loshchilov and Hutter (2016). It relies on
+the observation that we might not want to decrease the learning rate too drastically in the
+beginning and moreover, that we might want to “refine” the solution in the end using a very
+small learning rate. This results in a cosine-like schedule with the following functional
+543
+Learning Rate Scheduling
+form for learning rates in the range 𝑡 ∈ [0,𝑇].
+𝜂𝑡 = 𝜂𝑇 + 𝜂0 −𝜂𝑇
+2 (1+cos(𝜋𝑡/𝑇))
+(12.11.1)
+Here 𝜂0 is the initial learning rate, 𝜂𝑇 is the target rate at time 𝑇. Furthermore, for 𝑡 > 𝑇
+we simply pin the value to 𝜂𝑇 without increasing it again. In the following example, we set
+the max update step 𝑇 = 20.
+class CosineScheduler:
+def __init__(self, max_update, base_lr=0.01, final_lr=0,
+warmup_steps=0, warmup_begin_lr=0):
+self.base_lr_orig = base_lr
+self.max_update = max_update
+self.final_lr = final_lr
+self.warmup_steps = warmup_steps
+self.warmup_begin_lr = warmup_begin_lr
+self.max_steps = self.max_update- self.warmup_steps
+def get_warmup_lr(self, epoch):
+increase = (self.base_lr_orig- self.warmup_begin_lr) \
+* float(epoch) / float(self.warmup_steps)
+return self.warmup_begin_lr + increase
+def __call__(self, epoch):
+if epoch < self.warmup_steps:
+return self.get_warmup_lr(epoch)
+if epoch <= self.max_update:
+self.base_lr = self.final_lr + (
+self.base_lr_orig- self.final_lr) * (1 + math.cos(
+math.pi * (epoch- self.warmup_steps) / self.max_steps)) / 2
+return self.base_lr
+scheduler = CosineScheduler(max_update=20, base_lr=0.3, final_lr=0.01)
+d2l.plot(torch.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
+In the context of computer vision this schedule can lead to improved results. Note, though,
+that such improvements are not guaranteed (as can be seen below).
+net = net_fn()
+trainer = torch.optim.SGD(net.parameters(), lr=0.3)
+train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
+scheduler)
+544
+Optimization Algorithms
+train loss 0.159, train acc 0.942, test acc 0.904
+Warmup
+In some cases initializing the parameters is not sufficient to guarantee a good solution. This
+is particularly a problem for some advanced network designs that may lead to unstable
+optimization problems. We could address this by choosing a sufficiently small learning
+rate to prevent divergence in the beginning. Unfortunately this means that progress is slow.
+Conversely, a large learning rate initially leads to divergence.
+A rather simple fixfor this dilemma is to use awarmup periodduringwhich the learning rate
+increases to its initial maximum and to cool down the rate until the end of the optimization
+process. For simplicity one typically uses a linear increase for this purpose. This leads to
+a schedule of the form indicated below.
+scheduler = CosineScheduler(20, warmup_steps=5, base_lr=0.3, final_lr=0.01)
+d2l.plot(torch.arange(num_epochs), [scheduler(t) for t in range(num_epochs)])
+Note that the network converges better initially (in particular observe the performance dur
+ing the first 5 epochs).
+net = net_fn()
+trainer = torch.optim.SGD(net.parameters(), lr=0.3)
+train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
+scheduler)
+545
+Learning Rate Scheduling
+182
+train loss 0.181, train acc 0.934, test acc 0.901
+Warmup can be applied to any scheduler (not just cosine). For a more detailed discussion
+of learning rate schedules and many more experiments see also (Gotmare et al., 2018). In
+particular they find that a warmup phase limits the amount of divergence of parameters
+in very deep networks. This makes intuitively sense since we would expect significant
+divergence due to random initialization in those parts of the network that take the most
+time to make progress in the beginning.
+12.11.4 Summary
+• Decreasing the learning rate during training can lead to improved accuracy and (most
+perplexingly) reduced overfitting of the model.
+• Apiecewise decrease of the learning rate whenever progress has plateaued is effective
+in practice. Essentially this ensures that we converge efficiently to a suitable solution
+and only then reduce the inherent variance of the parameters by reducing the learning
+rate.
+• Cosine schedulers are popular for some computer vision problems. See e.g., GluonCV
+182 for details of such a scheduler.
+• Awarmupperiod before optimization can prevent divergence.
+• Optimizationservesmultiplepurposesindeeplearning. Besidesminimizingthetraining
+objective, different choices of optimization algorithms and learning rate scheduling
+can lead to rather different amounts of generalization and overfitting on the test set
+(for the same amount of training error).
+12.11.5 Exercises
+1. Experiment with the optimization behavior for a given fixed learning rate. What is the
+best model you can obtain this way?
+2. Howdoesconvergencechangeifyouchangetheexponentofthedecreaseinthelearning
+rate? Use PolyScheduler for your convenience in the experiments.
+546
+Optimization Algorithms
+183
+3. Apply the cosine scheduler to large computer vision problems, e.g., training ImageNet.
+How does it affect performance relative to other schedulers?
+4. Howlong should warmup last?
+5. Can you connect optimization and sampling? Start by using results from Welling and
+Teh (2011) on Stochastic Gradient Langevin Dynamics.
+Discussions183.

@@ -1,6 +1,18 @@
 # D2L Study Checkpoint
 
-Updated: 2026-08-17 KST
+Updated: 2026-08-23 KST
+
+## Active target
+
+- Study resumed on 2026-08-22 after a short break.
+- Target: complete Chapter 12 Optimization Algorithms and Chapter 13
+  Computational Performance before 2026-09-01.
+- Chapter 12 source is preserved and range-validated against the official D2L
+  1.0.3 chapter contents.
+- Sections 12.1 through 12.6 are complete.
+- Immediate next action: begin Section 12.7 Adagrad.
+- Maintain the established translation, explanation, learner-typed practice,
+  and validation standards while working toward the deadline.
 
 ## Current progress
 
@@ -108,7 +120,15 @@ Updated: 2026-08-17 KST
 - Section 11.8 practice covers Patch Embedding, Pre-Normalization ViT blocks, a complete Vision Transformer, and Fashion-MNIST GPU training; fresh validation on 2026-08-17 produced validation loss 0.3867 and validation accuracy 0.8588 with no saved exceptions.
 - Section 11.9 Large-Scale Pretraining with Transformers was completed conceptually without a notebook because the preserved source contains no implementation code.
 - Current mode: normal new-material study using full source translation, core explanation, Tensor Shape tracking, Data Flow, and learner-typed practice code.
-- Next starting point: Chapter 12 Optimization Algorithms after its source is supplied and range-validated.
+- Chapter 12 source text was supplied, LF-normalized, preserved in full, and range-validated on 2026-08-22.
+- The preserved Chapter 12 range begins at Section 12.1 Optimization and Deep Learning and ends after Section 12.11.5 Exercises and its discussion marker.
+- Sections 12.1 Optimization and Deep Learning through 12.6 Momentum are complete.
+- Chapter 12 currently contains 17 practice notebooks.
+- All 17 Chapter 12 notebooks passed fresh execution from their own directories during `스톱오버` on 2026-08-23.
+- A repository-wide structural audit of 176 notebooks found no blank cells or duplicate cell IDs.
+- Seventeen older notebooks changed only by the learner-authorized removal of blank cells also passed fresh execution.
+- Section 12.7 Adagrad has not been started and no Section 12.7 notebook exists.
+- Next starting point: Section 12.7 Adagrad.
 
 ## Teaching and notebook rules
 
@@ -160,6 +180,9 @@ Updated: 2026-08-17 KST
 - `source/ch11_full.txt`
   - SHA-256: `bb3680bf98c31cc034d74afc0fe02e16fccb233450fba30d97a5b5e4b7329787`
   - LF-normalized, trailing-whitespace-cleaned preservation of the supplied Chapter 11 source; range begins at the chapter introduction and ends after Section 11.9.7 Exercises and its discussion marker.
+- `source/ch12_full.txt`
+  - SHA-256: `789c4509d9fc308327424f338830c4d9bf2c1ff0a606cb95f21568dd309efd91`
+  - LF-normalized preservation of the supplied Chapter 12 source; range begins at Section 12.1 Optimization and Deep Learning and ends after Section 12.11.5 Exercises and its discussion marker.
 
 ## Existing Chapter 4 notebooks
 
