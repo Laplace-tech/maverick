@@ -75,6 +75,9 @@
 | [Gradient Descent and Newton's Method](src/ch12_optimization_algorithms/sec12_3_gradient_descent/03_newton_method_and_preconditioning.ipynb) | First-order update, Hessian, preconditioning |
 | [Minibatch SGD from Scratch](src/ch12_optimization_algorithms/sec12_5_minibatch_stochastic_gradient_descent/03_minibatch_sgd_from_scratch.ipynb) | Statistical efficiency와 computational efficiency |
 | [Momentum from Scratch](src/ch12_optimization_algorithms/sec12_6_momentum/04_momentum_from_scratch.ipynb) | Velocity state, gradient averaging, accelerated convergence |
+| [Adagrad from Scratch](src/ch12_optimization_algorithms/sec12_7_adagrad/02_adagrad_from_scratch.ipynb) | Cumulative squared gradient와 coordinate-wise learning rate |
+| [RMSProp from Scratch](src/ch12_optimization_algorithms/sec12_8_rmsprop/02_rmsprop_from_scratch.ipynb) | Leaky squared-gradient average와 adaptive scaling |
+| [Adadelta from Scratch](src/ch12_optimization_algorithms/sec12_9_adadelta/01_adadelta_from_scratch.ipynb) | Gradient와 parameter-update second moment |
 
 ---
 
@@ -100,7 +103,7 @@
 
 | Chapter | Topic | Progress |
 |:---:|---|:---:|
-| **12** | **Optimization Algorithms** | **12.1–12.6 Done · 12.7 Next** |
+| **12** | **Optimization Algorithms** | **12.1–12.9 Done · 12.10 Adam Next** |
 | **13** | **Computational Performance** | **Committed** |
 | 14 | Computer Vision | If Time Allows |
 | 15 | Natural Language Processing: Pretraining | If Time Allows |

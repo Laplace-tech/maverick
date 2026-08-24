@@ -1,6 +1,6 @@
 # D2L Study Checkpoint
 
-Updated: 2026-08-23 KST
+Updated: 2026-08-24 KST
 
 ## Active target
 
@@ -9,8 +9,8 @@ Updated: 2026-08-23 KST
   Computational Performance before 2026-09-01.
 - Chapter 12 source is preserved and range-validated against the official D2L
   1.0.3 chapter contents.
-- Sections 12.1 through 12.6 are complete.
-- Immediate next action: begin Section 12.7 Adagrad.
+- Sections 12.1 through 12.9 are complete.
+- Immediate next action: begin Section 12.10 Adam.
 - Maintain the established translation, explanation, learner-typed practice,
   and validation standards while working toward the deadline.
 
@@ -122,13 +122,15 @@ Updated: 2026-08-23 KST
 - Current mode: normal new-material study using full source translation, core explanation, Tensor Shape tracking, Data Flow, and learner-typed practice code.
 - Chapter 12 source text was supplied, LF-normalized, preserved in full, and range-validated on 2026-08-22.
 - The preserved Chapter 12 range begins at Section 12.1 Optimization and Deep Learning and ends after Section 12.11.5 Exercises and its discussion marker.
-- Sections 12.1 Optimization and Deep Learning through 12.6 Momentum are complete.
-- Chapter 12 currently contains 17 practice notebooks.
+- Sections 12.1 Optimization and Deep Learning through 12.9 Adadelta are complete.
+- Chapter 12 currently contains 25 practice notebooks.
 - All 17 Chapter 12 notebooks passed fresh execution from their own directories during `스톱오버` on 2026-08-23.
 - A repository-wide structural audit of 176 notebooks found no blank cells or duplicate cell IDs.
 - Seventeen older notebooks changed only by the learner-authorized removal of blank cells also passed fresh execution.
-- Section 12.7 Adagrad has not been started and no Section 12.7 notebook exists.
-- Next starting point: Section 12.7 Adagrad.
+- Sections 12.7 Adagrad, 12.8 RMSProp, and 12.9 Adadelta are complete.
+- Eight notebooks for Sections 12.7 through 12.9 passed fresh execution from
+  their own directories during `스톱오버` on 2026-08-24.
+- Next starting point: Section 12.10 Adam.
 
 ## Teaching and notebook rules
 

@@ -1,6 +1,6 @@
 # Maverick D2L Context Card
 
-Updated: 2026-08-23 KST
+Updated: 2026-08-24 KST
 
 This file is the durable operating card for continuing the Maverick D2L study
 in a fresh Codex conversation. The repository-root `AGENTS.md` points here so
@@ -78,10 +78,11 @@ Current mode is normal new-material study:
 
 1. Chapter 11 Attention Mechanisms and Transformers is complete.
 2. Chapter 12 Optimization Algorithms source is preserved and range-validated.
-3. Sections 12.1 through 12.6 are complete; Exercises were skipped by default.
-4. Seventeen Chapter 12 notebooks passed fresh execution during `스톱오버`
-   on 2026-08-23.
-5. Resume at Section 12.7 Adagrad; no Section 12.7 notebook has been created.
+3. Sections 12.1 through 12.9 are complete; Exercises were skipped by default.
+4. Chapter 12 contains 25 practice notebooks through Section 12.9.
+5. The eight notebooks added for Adagrad, RMSProp, and Adadelta passed fresh
+   execution during `스톱오버` on 2026-08-24.
+6. Resume at Section 12.10 Adam.
 
 Current deadline target:
 
@@ -94,7 +95,7 @@ Current deadline target:
 
 Immediate next action:
 
-- Begin Section 12.7 Adagrad.
+- Begin Section 12.10 Adam.
 - Use the normal `원문해석 -> 핵심정리 -> 실습코드` routine.
 
 Completed Section 11.6 state:
@@ -187,6 +188,18 @@ The repository-wide structural audit found no blank cells or duplicate cell IDs.
 - `sec12_6_momentum/04_momentum_from_scratch.ipynb`
 - `sec12_6_momentum/05_concise_momentum.ipynb`
 - `sec12_6_momentum/06_scalar_functions.ipynb`
+- `sec12_7_adagrad/01_adagrad_algorithm.ipynb`
+- `sec12_7_adagrad/02_adagrad_from_scratch.ipynb`
+- `sec12_7_adagrad/03_concise_adagrad.ipynb`
+- `sec12_8_rmsprop/01_rmsprop_algorithm.ipynb`
+- `sec12_8_rmsprop/02_rmsprop_from_scratch.ipynb`
+- `sec12_8_rmsprop/03_concise_rmsprop.ipynb`
+- `sec12_9_adadelta/01_adadelta_from_scratch.ipynb`
+- `sec12_9_adadelta/02_concise_adadelta.ipynb`
+
+The eight notebooks for Sections 12.7 through 12.9 passed fresh execution from
+their own directories during `스톱오버` on 2026-08-24. Resume at Section 12.10
+Adam.
 
 ## 6. Normal new-material routine
 
@@ -444,8 +457,8 @@ A fresh Codex session should do the following silently and efficiently:
 For the present checkpoint, the recovered opening should be equivalent to:
 
 ```text
-Chapter 11 Sections 11.1–11.9 are complete; Exercises were skipped. Sections
-11.7 and 11.8 implementation notebooks are fresh-validated. The immediate
-route is Chapter 12 Optimization Algorithms after its source is supplied and
-range-validated, using the normal 원문해석, 핵심정리, and 실습코드 workflow.
+Chapter 12 Sections 12.1–12.9 are complete; Exercises were skipped. The
+Adagrad, RMSProp, and Adadelta implementation notebooks are fresh-validated.
+The immediate route is Section 12.10 Adam using the normal 원문해석, 핵심정리,
+and 실습코드 workflow.
 ```
