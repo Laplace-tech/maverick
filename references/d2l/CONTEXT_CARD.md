@@ -78,16 +78,21 @@ Current mode is normal new-material study:
 
 1. Chapter 11 Attention Mechanisms and Transformers is complete.
 2. Chapter 12 Optimization Algorithms source is preserved and range-validated.
-3. Sections 12.1 through 12.9 are complete; Exercises were skipped by default.
-4. Chapter 12 contains 25 practice notebooks through Section 12.9.
+3. Sections 12.1 through 12.11.4 are complete; Exercises were skipped by default.
+4. Chapter 12 is complete with 33 practice notebooks.
 5. The eight notebooks added for Adagrad, RMSProp, and Adadelta passed fresh
    execution during `스톱오버` on 2026-08-24.
-6. Resume at Section 12.10 Adam.
+6. The eight Adam and Learning Rate Scheduling notebooks have successful saved
+   outputs and no saved exceptions. Adam, Yogi, Factor Scheduler, Multi-Step
+   Scheduler, and Warmup also passed fresh execution during the final Chapter
+   12 validation sequence.
+7. Resume at Chapter 13 Computational Performance after its source is supplied
+   and range-validated.
 
 Current deadline target:
 
-- Complete Chapter 12 Optimization Algorithms and Chapter 13 Computational
-  Performance before the 2026-09-01 semester begins.
+- Chapter 12 Optimization Algorithms is complete. Complete Chapter 13
+  Computational Performance before the 2026-09-01 semester begins.
 - Study resumed on 2026-08-22 after a short break. Rebuild momentum without
   attempting to compress the missed week into a single session.
 - Preserve understanding, source order, learner-typed code, and validation;
@@ -95,8 +100,9 @@ Current deadline target:
 
 Immediate next action:
 
-- Begin Section 12.10 Adam.
-- Use the normal `원문해석 -> 핵심정리 -> 실습코드` routine.
+- Obtain and range-validate the Chapter 13 source.
+- Begin Chapter 13 using the normal `원문해석 -> 핵심정리 -> 실습코드`
+  routine.
 
 Completed Section 11.6 state:
 
@@ -167,9 +173,9 @@ All paths in this inventory are relative to:
 
 ## 5.1 Chapter 12 notebook inventory
 
-Sections 12.1 through 12.6 are complete with 17 notebooks. During `스톱오버`
-on 2026-08-23, every notebook passed fresh execution from its own directory.
-The repository-wide structural audit found no blank cells or duplicate cell IDs.
+Chapter 12 is complete with 33 notebooks. The final repository-wide structural
+audit on 2026-08-24 covered 192 notebooks and found no blank cells, duplicate
+cell IDs, or invalid notebook JSON.
 
 - `sec12_1_optimization_and_deep_learning/01_optimization_challenges.ipynb`
 - `sec12_2_convexity/01_convex_sets_and_functions.ipynb`
@@ -196,10 +202,19 @@ The repository-wide structural audit found no blank cells or duplicate cell IDs.
 - `sec12_8_rmsprop/03_concise_rmsprop.ipynb`
 - `sec12_9_adadelta/01_adadelta_from_scratch.ipynb`
 - `sec12_9_adadelta/02_concise_adadelta.ipynb`
+- `sec12_10_adam/01_adam_from_scratch.ipynb`
+- `sec12_10_adam/02_concise_adam.ipynb`
+- `sec12_10_adam/03_yogi.ipynb`
+- `sec12_11_learning_rate_scheduling/01_toy_problem.ipynb`
+- `sec12_11_learning_rate_scheduling/02_factor_scheduler.ipynb`
+- `sec12_11_learning_rate_scheduling/03_multi_factor_scheduler.ipynb`
+- `sec12_11_learning_rate_scheduling/04_cosine_scheduler.ipynb`
+- `sec12_11_learning_rate_scheduling/05_warmup.ipynb`
 
 The eight notebooks for Sections 12.7 through 12.9 passed fresh execution from
-their own directories during `스톱오버` on 2026-08-24. Resume at Section 12.10
-Adam.
+their own directories during `스톱오버` on 2026-08-24. The notebooks for
+Sections 12.10 and 12.11 have successful saved outputs and no saved exceptions.
+Chapter 13 is next after its source is supplied and range-validated.
 
 ## 6. Normal new-material routine
 
@@ -457,8 +472,8 @@ A fresh Codex session should do the following silently and efficiently:
 For the present checkpoint, the recovered opening should be equivalent to:
 
 ```text
-Chapter 12 Sections 12.1–12.9 are complete; Exercises were skipped. The
-Adagrad, RMSProp, and Adadelta implementation notebooks are fresh-validated.
-The immediate route is Section 12.10 Adam using the normal 원문해석, 핵심정리,
-and 실습코드 workflow.
+Chapter 12 Sections 12.1–12.11.4 are complete; Exercises were skipped. The
+repository contains 33 Chapter 12 notebooks with successful saved outputs and
+no saved exceptions in the final section. The immediate route is Chapter 13
+Computational Performance after its source is supplied and range-validated.
 ```

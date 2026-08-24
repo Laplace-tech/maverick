@@ -78,6 +78,8 @@
 | [Adagrad from Scratch](src/ch12_optimization_algorithms/sec12_7_adagrad/02_adagrad_from_scratch.ipynb) | Cumulative squared gradient와 coordinate-wise learning rate |
 | [RMSProp from Scratch](src/ch12_optimization_algorithms/sec12_8_rmsprop/02_rmsprop_from_scratch.ipynb) | Leaky squared-gradient average와 adaptive scaling |
 | [Adadelta from Scratch](src/ch12_optimization_algorithms/sec12_9_adadelta/01_adadelta_from_scratch.ipynb) | Gradient와 parameter-update second moment |
+| [Adam from Scratch](src/ch12_optimization_algorithms/sec12_10_adam/01_adam_from_scratch.ipynb) | First/second moment, bias correction, adaptive update |
+| [Warmup & Cosine Scheduling](src/ch12_optimization_algorithms/sec12_11_learning_rate_scheduling/05_warmup.ipynb) | Linear warmup, cosine decay, learning-rate dynamics |
 
 ---
 
@@ -98,12 +100,12 @@
 | 9 | Recurrent Neural Networks | ✅ Done |
 | 10 | Modern Recurrent Neural Networks | ✅ Done |
 | 11 | Attention Mechanisms and Transformers | ✅ Done |
+| 12 | Optimization Algorithms | ✅ Done |
 
 ### Forward Route
 
 | Chapter | Topic | Progress |
 |:---:|---|:---:|
-| **12** | **Optimization Algorithms** | **12.1–12.9 Done · 12.10 Adam Next** |
 | **13** | **Computational Performance** | **Committed** |
 | 14 | Computer Vision | If Time Allows |
 | 15 | Natural Language Processing: Pretraining | If Time Allows |
@@ -129,7 +131,7 @@ src/
 ├── ch09_recurrent_neural_networks/                  12 notebooks
 ├── ch10_modern_recurrent_neural_networks/           14 notebooks
 ├── ch11_attention_mechanisms_and_transformers/      21 notebooks
-└── ch12_optimization_algorithms/                    17 notebooks
+└── ch12_optimization_algorithms/                    33 notebooks
 ```
 
 ## Run Locally
